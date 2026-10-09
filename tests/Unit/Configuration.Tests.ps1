@@ -65,3 +65,14 @@ Invoke-TestCase -Name 'Config missing file fails explicitly' -Body {
     $missing = Join-Path ([IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString('n'))
     Assert-Throws { Read-AppConfiguration -ApplicationRoot $missing }
 }
+
+Invoke-TestCase -Name 'Config validates safe offline state directories and scope' -Body {
+    $cfg = Read-AppConfiguration -ApplicationRoot $ProjectRoot
+    Assert-Equal 'demo' $cfg.state.defaultEnvironment
+    Assert-Equal 'edge-gw-demo' $cfg.state.defaultScope
+    Test-InvalidConfiguration { param($c) $c.state.defaultEnvironment = '../outside' }
+    Test-InvalidConfiguration { param($c) $c.state.defaultScope = 'scope/other' }
+    Test-InvalidConfiguration { param($c) $c.state.directory = '..\state' }
+    Test-InvalidConfiguration { param($c) $c.state.demoDirectory = '..\demo' }
+    Test-InvalidConfiguration { param($c) $c.state.reportsDirectory = 'C:\private' }
+}

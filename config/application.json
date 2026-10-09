@@ -5,7 +5,7 @@
     "vcdVersion": "10.6",
     "networkBacking": "NSX-T",
     "powershellVersion": "5.1",
-    "mode": "Offline / Phase 1"
+    "mode": "Offline / Phase 2"
   },
   "runtime": {
     "maximumWorkers": 3,
@@ -16,5 +16,12 @@
     "maximumFileBytes": 5000000,
     "retentionDays": 30,
     "level": "INFO"
+  },
+  "state": {
+    "directory": "state",
+    "defaultEnvironment": "demo",
+    "defaultScope": "edge-gw-demo",
+    "reportsDirectory": "reports",
+    "demoDirectory": "examples/demo-state"
   }
 }

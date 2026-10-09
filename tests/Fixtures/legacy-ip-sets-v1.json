@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "resourceKind": "ipSets",
+  "resources": [
+    {
+      "key": "web",
+      "name": "Web Servers",
+      "addresses": [
+        "10.10.1.10",
+        "10.10.1.11"
+      ]
+    }
+  ]
+}

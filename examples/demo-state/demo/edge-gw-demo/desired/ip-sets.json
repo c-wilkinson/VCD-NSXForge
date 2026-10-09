@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 2,
+  "resourceKind": "ipSets",
+  "items": [
+    {
+      "key": "web",
+      "name": "Web Servers",
+      "addresses": [
+        "10.10.1.10",
+        "10.10.1.11"
+      ]
+    },
+    {
+      "key": "monitor",
+      "name": "Monitoring Servers",
+      "addresses": [
+        "10.10.3.10",
+        "10.10.3.11"
+      ]
+    }
+  ]
+}

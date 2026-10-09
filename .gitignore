@@ -14,3 +14,4 @@ Thumbs.db
 # Future observed/applied state should not enter desired-state Git repo
 state/**/observed/
 state/**/applied/
+*.lock

@@ -108,3 +108,19 @@ inside dynamic event-handler modules.
 
 The source-architecture suite also checks function verbs using `Get-Verb`.
 No module warnings should be suppressed to hide unapproved verbs.
+
+## Phase 2 additions
+
+- `StateModel.Tests.ps1`: schemas, v1 migration, IP/CIDR and firewall validation,
+  canonical comparison semantics.
+- `StateRepository.Tests.ps1`: safe paths, view completeness, atomic per-file
+  writes and SHA-256 compare-and-swap, no implicit observed/applied creation.
+- `Planning.Tests.ps1`: deterministic 3-way changes, drift, unmanaged key
+  collisions, references, dependencies, rule moves and escaped HTML.
+- `OfflineWorker.Tests.ps1`: real asynchronous worker produces HTML/JSON from
+  an offline synthetic state; VCD HTTP remains unimplemented.
+- Windows UI smoke now also presses **Generate offline plan** and checks that
+  the report path reaches the event log without freezing the form.
+
+The same NUnit 3 runner is used. No percentage of statement or branch coverage
+is claimed until the project runs on Windows with instrumentation.

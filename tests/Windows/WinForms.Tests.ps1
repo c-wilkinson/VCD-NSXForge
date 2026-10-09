@@ -35,6 +35,18 @@ if ($RunUiTests -and [Environment]::UserInteractive -and $PSVersionTable.PSEditi
             Assert-True ($ticks.Text -ne $before) 'UI timer failed to tick during background execution'
             Assert-True $button.Enabled 'Run button did not become enabled again'
 
+            $planButton = $window.Form.Controls.Find('PlanDemoButton', $true)[0]
+            Assert-True ($null -ne $planButton) 'Missing Phase 2 offline-plan button'
+            $planButton.PerformClick()
+            $deadline = [DateTime]::UtcNow.AddSeconds(10)
+            while ([DateTime]::UtcNow -lt $deadline -and -not $planButton.Enabled) {
+                [System.Windows.Forms.Application]::DoEvents()
+                [System.Threading.Thread]::Sleep(30)
+            }
+            [System.Windows.Forms.Application]::DoEvents()
+            Assert-True ($status.Text -match '^Completed:') "Offline plan UI failed: $($status.Text); events: $($eventsBox.Text)"
+            Assert-True ($eventsBox.Text -match 'PLAN: .*HTML=') 'Report path missing from UI event log'
+
             $failureButton = $window.Form.Controls.Find('FailureDemoButton', $true)[0]
             $failureButton.PerformClick()
             $deadline = [DateTime]::UtcNow.AddSeconds(5)

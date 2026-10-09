@@ -46,3 +46,12 @@ Invoke-TestCase -Name 'UI terminal statuses reset active operation; unknown even
         Assert-Equal $false (Update-UiOperationState -State $state -Event ([pscustomobject]@{Type='Completed';OperationId='op';Message='again'}))
     }
 }
+
+Invoke-TestCase -Name 'UI state accepts plan summary only for its active operation' -Body {
+    $state = New-UiOperationState
+    Set-UiOperationStarted -State $state -OperationId 'newplan'
+    Assert-True (-not (Update-UiOperationState -State $state -Event ([pscustomobject]@{Type='PlanSummary';OperationId='oldplan';Message='stale';Percent=90})))
+    Assert-True (Update-UiOperationState -State $state -Event ([pscustomobject]@{Type='PlanSummary';OperationId='newplan';Message='Plan ready';Percent=95}))
+    Assert-Equal 'Plan ready' $state.Message
+    Assert-Equal 95 $state.Percent
+}

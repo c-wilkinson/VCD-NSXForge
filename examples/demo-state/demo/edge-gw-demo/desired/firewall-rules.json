@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 2,
+  "resourceKind": "edgeFirewallRules",
+  "items": [
+    {
+      "key": "allow-web",
+      "name": "Allow web to application",
+      "order": 10,
+      "action": "ALLOW",
+      "enabled": true,
+      "logging": true,
+      "sourceIpSets": [
+        "web"
+      ],
+      "destinationIpSets": [],
+      "services": [
+        {
+          "protocol": "TCP",
+          "ports": [
+            "443"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "allow-monitoring",
+      "name": "Allow monitoring",
+      "order": 30,
+      "action": "ALLOW",
+      "enabled": true,
+      "logging": true,
+      "sourceIpSets": [
+        "monitor"
+      ],
+      "destinationIpSets": [
+        "web"
+      ],
+      "services": [
+        {
+          "protocol": "TCP",
+          "ports": [
+            "443"
+          ]
+        }
+      ]
+    }
+  ]
+}

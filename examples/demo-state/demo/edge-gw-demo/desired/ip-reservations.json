@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "resourceKind": "manualIpReservations",
+  "items": [
+    {
+      "key": "ops-station",
+      "networkId": "org-vdc-network-demo",
+      "address": "10.10.50.12",
+      "description": "Demo reservation"
+    }
+  ]
+}

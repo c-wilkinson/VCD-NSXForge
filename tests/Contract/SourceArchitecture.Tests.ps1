@@ -26,7 +26,7 @@ Invoke-TestCase -Name 'All source modules have at least one direct test referenc
     # Inventory check only; NOT a line-coverage percentage.
     $testText = (@(Get-ChildItem -LiteralPath (Join-Path $ProjectRoot 'tests') -Recurse -Filter '*.Tests.ps1' -File |
         ForEach-Object { [IO.File]::ReadAllText($_.FullName) }) -join [Environment]::NewLine)
-    foreach ($module in @('Configuration.psm1','Logging.psm1','Logging.File.ps1','Dispatcher.psm1','UiState.psm1','MainForm.psm1','VcdApi.psm1')) {
+    foreach ($module in @('Configuration.psm1','Logging.psm1','Logging.File.ps1','Dispatcher.psm1','UiState.psm1','MainForm.psm1','VcdApi.psm1','StateModel.psm1','StateRepository.psm1','Planning.psm1','OfflinePlan.psm1')) {
         Assert-True ($testText.Contains($module)) "Missing direct test for $module"
     }
 }
@@ -53,4 +53,16 @@ Invoke-TestCase -Name 'WinForms event handlers capture cross-module commands exp
         Assert-True ($content.Contains("Get-Command -Name '$command'")) "Missing captured command: $command"
     }
     Assert-True ($content.Contains("$" + 'events.Name = ' + "'EventsTextBox'")) 'UI event textbox must have a stable control name'
+}
+
+Invoke-TestCase -Name 'Offline planning modules contain no VCD transport, WinForms or apply calls' -Body {
+    foreach ($relative in @('src\Domain\State\StateModel.psm1',
+                            'src\Domain\Planning\Planning.psm1',
+                            'src\Infrastructure\State\StateRepository.psm1',
+                            'src\Application\Planning\OfflinePlan.psm1')) {
+        $source = [IO.File]::ReadAllText((Join-Path $ProjectRoot $relative))
+        foreach ($forbidden in @('Invoke-RestMethod','Invoke-WebRequest','Add-Type -AssemblyName System.Windows.Forms','Invoke-VcdWrite')) {
+            Assert-True (-not $source.Contains($forbidden)) "$relative must not contain live transport or UI calls"
+        }
+    }
 }

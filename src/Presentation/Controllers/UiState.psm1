@@ -24,6 +24,12 @@ function Update-UiOperationState {
     param([Parameter(Mandatory)]$State, [Parameter(Mandatory)]$Event)
     if (-not $State.ActiveOperationId -or [string]$Event.OperationId -ne [string]$State.ActiveOperationId) { return $false }
     switch ([string]$Event.Type) {
+        'PlanSummary' {
+            if ($State.Phase -eq 'Cancelling') { return $false }
+            $State.Message = [string]$Event.Message
+            $State.Percent = [Math]::Max(0, [Math]::Min(100, [int]$Event.Percent))
+            return $true
+        }
         'Progress' {
             if ($State.Phase -eq 'Cancelling') { return $false }
             $State.Message = [string]$Event.Message

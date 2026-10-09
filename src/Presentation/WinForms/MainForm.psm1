@@ -12,10 +12,10 @@ function New-NetworkManagerForm {
     )
     $form = [System.Windows.Forms.Form]::new()
     $form.Name = 'MainForm'
-    $form.Text = 'VCD Network Manager - Phase 1 (Offline)'
+    $form.Text = 'VCD Network Manager - Phase 2 (Offline)'
     $form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
     $form.ClientSize = [System.Drawing.Size]::new(850, 545)
-    $form.MinimumSize = [System.Drawing.Size]::new(690, 490)
+    $form.MinimumSize = [System.Drawing.Size]::new(880, 490)
     $form.Font = [System.Drawing.Font]::new('Segoe UI', 10)
     $form.BackColor = [System.Drawing.Color]::White
     $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Font
@@ -45,6 +45,11 @@ function New-NetworkManagerForm {
     $cancel.Text = 'Cancel operation'
     $cancel.SetBounds(411, 111, 166, 37)
     $cancel.Enabled = $false
+    $planButton = [System.Windows.Forms.Button]::new()
+    $planButton.Name = 'PlanDemoButton'
+    $planButton.Text = 'Generate offline plan'
+    $planButton.SetBounds(590, 111, 229, 37)
+    $planButton.Anchor = 'Top, Right'
 
     $statusTitle = [System.Windows.Forms.Label]::new()
     $statusTitle.Text = 'Status'
@@ -87,12 +92,12 @@ function New-NetworkManagerForm {
     $events.BackColor = [System.Drawing.Color]::FromArgb(247, 248, 250)
 
     $footer = [System.Windows.Forms.Label]::new()
-    $footer.Text = 'Phase 1: no infrastructure changes are performed. Logs rotate at 5 MB and expire after 30 days.'
+    $footer.Text = 'Phase 2: offline plan only; no infrastructure changes. Logs rotate at 5 MB and expire after 30 days.'
     $footer.SetBounds(26, 510, 795, 23)
     $footer.ForeColor = [System.Drawing.Color]::DimGray
     $footer.Anchor = 'Left, Right, Bottom'
 
-    foreach ($control in @($heading,$subtitle,$run,$fail,$cancel,$statusTitle,$status,$progress,$threadNote,$eventsHeading,$events,$footer)) {
+    foreach ($control in @($heading,$subtitle,$run,$fail,$cancel,$planButton,$statusTitle,$status,$progress,$threadNote,$eventsHeading,$events,$footer)) {
         [void]$form.Controls.Add($control)
     }
 
@@ -124,14 +129,15 @@ function New-NetworkManagerForm {
     }.GetNewClosure()
 
     $startOperation = {
-        param([string]$name)
+        param([string]$name, [hashtable]$arguments = @{})
         if ($ui.Closing -or $ui.ActiveOperationId) { return }
         $id = ''
         try {
-            $id = & $commands.StartWorker -Dispatcher $Dispatcher -Operation $name
+            $id = & $commands.StartWorker -Dispatcher $Dispatcher -Operation $name -Arguments $arguments
             & $commands.StartState -State $ui -OperationId $id
             $run.Enabled = $false
             $fail.Enabled = $false
+            $planButton.Enabled = $false
             $cancel.Enabled = $true
             $progress.Value = 0
             $status.Text = 'Operation queued on background runspace...'
@@ -153,6 +159,15 @@ function New-NetworkManagerForm {
 
     $run.Add_Click({ & $startOperation 'ProgressDemo' }.GetNewClosure())
     $fail.Add_Click({ & $startOperation 'FailureDemo' }.GetNewClosure())
+    $planButton.Add_Click({
+        $arguments = @{
+            StateRoot = (Join-Path $Configuration.ApplicationRoot $Configuration.state.demoDirectory)
+            Environment = [string]$Configuration.state.defaultEnvironment
+            Scope = [string]$Configuration.state.defaultScope
+            OutputDirectory = (Join-Path $Configuration.ApplicationRoot $Configuration.state.reportsDirectory)
+        }
+        & $startOperation 'OfflinePlan' $arguments
+    }.GetNewClosure())
     $cancel.Add_Click({
         if ($ui.ActiveOperationId) {
             & $commands.CancelWorker -Dispatcher $Dispatcher -OperationId $ui.ActiveOperationId
@@ -173,13 +188,17 @@ function New-NetworkManagerForm {
             if (-not (& $commands.UpdateState -State $ui -Event $item)) { continue }
             $status.Text = $ui.Message
             $progress.Value = $ui.Percent
-            if ($item.Type -eq 'Progress') {
+            if ($item.Type -eq 'PlanSummary') {
+                & $logEvent ("PLAN: $($item.Message)")
+            }
+            elseif ($item.Type -eq 'Progress') {
                 & $logEvent ("PROGRESS: $($item.Message)")
             }
             elseif ($item.Type -in @('Completed','Cancelled','Failed')) {
                 & $logEvent ("$($item.Type.ToUpperInvariant()): $($item.Message)")
                 $run.Enabled = -not $ui.Closing
                 $fail.Enabled = -not $ui.Closing
+                $planButton.Enabled = -not $ui.Closing
                 $cancel.Enabled = $false
             }
         }
@@ -201,6 +220,7 @@ function New-NetworkManagerForm {
             $ui.Closing = $true
             $run.Enabled = $false
             $fail.Enabled = $false
+            $planButton.Enabled = $false
             $cancel.Enabled = $false
             $status.Text = 'Closing: cancelling active operations...'
             & $commands.CancelWorker -Dispatcher $Dispatcher

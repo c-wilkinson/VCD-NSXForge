@@ -35,6 +35,17 @@ function Read-AppConfiguration {
         throw 'Logging directory cannot traverse outside the application root.'
     }
 
+    if ($configuration.PSObject.Properties.Name -cnotcontains 'state') { throw 'State configuration is missing.' }
+    foreach ($setting in @('directory','reportsDirectory','demoDirectory')) {
+        $value = [string]$configuration.state.$setting
+        if ([string]::IsNullOrWhiteSpace($value) -or [IO.Path]::IsPathRooted($value) -or ($value -split '[\\/]') -contains '..') {
+            throw "Unsafe state path setting '$setting'."
+        }
+    }
+    foreach ($setting in @('defaultEnvironment','defaultScope')) {
+        $value = [string]$configuration.state.$setting
+        if ($value -cnotmatch '^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$') { throw "Invalid state setting '$setting'." }
+    }
     $configuration | Add-Member -NotePropertyName ApplicationRoot -NotePropertyValue $ApplicationRoot
     $configuration
 }

@@ -35,3 +35,19 @@ A small built-in test harness offers pass/fail output, a non-zero error exit cod
 ## ADR-009: Pure UI state and fail-closed API fixtures
 
 The UI event-to-state transition code is headless so unit tests verify stale completion/progress handling and cancellation without starting WinForms. The only VCD API path is an injected scriptblock; the fake rejects unknown paths and non-GET methods. Tests for later write actions are required before they are added to the public contract.
+
+## Phase 2 offline state & planning layers
+
+- `src/Domain/State/StateModel.psm1`: pure resource schemas, validation, v1->v2
+  in-memory migration, order/set-aware canonical comparisons.
+- `src/Infrastructure/State/StateRepository.psm1`: scoped per-view JSON files,
+  safe paths, per-file CAS saves and atomic replacement.
+- `src/Domain/Planning/Planning.psm1`: pure three-way diff, owned-resource
+  deletion boundary, drift blocking and dependency-aware deterministic plans.
+- `src/Application/Planning/OfflinePlan.psm1`: orchestrates repository + planner
+  and exports encoded HTML/JSON reports.
+- `tools/Invoke-Plan.ps1`: headless entry point; `OfflinePlan` background worker
+  uses the same application module, never a second planner implementation.
+
+Synthetic examples are kept outside `state/` so the production-style `.gitignore`
+continues excluding untracked observed/applied data. Phase 2 is offline only.

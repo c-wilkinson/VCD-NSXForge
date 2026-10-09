@@ -38,6 +38,23 @@ try {
             }
             Send-WorkerProgress -Message 'Simulation finished' -Percent 100
         }
+        'OfflinePlan' {
+            $CancellationToken.ThrowIfCancellationRequested()
+            Send-WorkerProgress -Message 'Loading offline desired/applied/observed state' -Percent 15
+            Import-Module (Join-Path $ApplicationRoot 'src\Application\Planning\OfflinePlan.psm1') -Force
+            $plan = Get-OfflineNetworkPlan -StateRoot ([string]$Arguments.StateRoot) -Environment ([string]$Arguments.Environment) -Scope ([string]$Arguments.Scope)
+            $CancellationToken.ThrowIfCancellationRequested()
+            Send-WorkerProgress -Message 'Building deterministic HTML and JSON reports' -Percent 65
+            $reports = Export-OfflineNetworkPlan -Plan $plan -OutputDirectory ([string]$Arguments.OutputDirectory)
+            $EventQueue.Enqueue([pscustomobject]@{
+                Type = 'PlanSummary'; OperationId = $OperationId
+                Message = ('{0}; blocked={1}; HTML={2}' -f $reports.Summary,$reports.Blocked,$reports.Html)
+                Percent = 95; WorkerThreadId = [System.Threading.Thread]::CurrentThread.ManagedThreadId
+            })
+            Write-AppLog -Logger $Logger -Component 'OfflinePlan' -Level 'INFO' -OperationId $OperationId -Message ('Offline report written; blocked={0}' -f $reports.Blocked)
+            $CancellationToken.ThrowIfCancellationRequested()
+            Send-WorkerProgress -Message 'Offline plan report created (no VCD calls)' -Percent 100
+        }
         'FailureDemo' {
             Send-WorkerProgress -Message 'Preparing simulated failure' -Percent 15
             [System.Threading.Thread]::Sleep(300)
