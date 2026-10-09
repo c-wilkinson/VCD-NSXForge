@@ -1,0 +1,1 @@
+{"page":1,"pageSize":100,"pageCount":2,"resultTotal":2,"values":[{"id":"urn:vcloud:firewallGroup:web","name":"Web Servers","typeValue":"IP_SET","ipAddresses":["10.20.10.10"]}]}

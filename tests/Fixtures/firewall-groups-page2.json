@@ -1,0 +1,1 @@
+{"page":2,"pageSize":100,"pageCount":2,"resultTotal":2,"values":[{"id":"urn:vcloud:firewallGroup:app","name":"App Servers","typeValue":"IP_SET","ipAddresses":["10.20.20.0/24"]}]}

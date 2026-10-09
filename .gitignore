@@ -1,0 +1,16 @@
+# Local runtime output
+logs/
+test-results/
+reports/
+*.tmp
+
+# Developer tooling
+.vs/
+.vscode/
+*.user
+.DS_Store
+Thumbs.db
+
+# Future observed/applied state should not enter desired-state Git repo
+state/**/observed/
+state/**/applied/

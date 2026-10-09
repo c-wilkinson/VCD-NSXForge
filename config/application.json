@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "product": "VCD Network Manager",
+  "target": {
+    "vcdVersion": "10.6",
+    "networkBacking": "NSX-T",
+    "powershellVersion": "5.1",
+    "mode": "Offline / Phase 1"
+  },
+  "runtime": {
+    "maximumWorkers": 3,
+    "uiPollMilliseconds": 100
+  },
+  "logging": {
+    "directory": "logs",
+    "maximumFileBytes": 5000000,
+    "retentionDays": 30,
+    "level": "INFO"
+  }
+}

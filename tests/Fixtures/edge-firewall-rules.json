@@ -1,0 +1,1 @@
+{"status":"REALIZED","systemRules":[],"userDefinedRules":[{"id":"urn:vcloud:firewallRule:one","name":"Allow Web","actionValue":"ALLOW","enabled":true,"logging":true,"version":{"version":7}}],"defaultRules":[]}

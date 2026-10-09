@@ -1,0 +1,1 @@
+{"page":1,"pageSize":100,"pageCount":1,"resultTotal":1,"values":[{"id":"urn:vcloud:networkManualIpReservation:one","name":"Proxy VIP","networkRef":{"id":"urn:vcloud:network:one"},"ipAddresses":"10.20.10.99","ipQuantity":1}]}
