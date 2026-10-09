@@ -1,0 +1,9 @@
+{
+  "mode": "Simulator",
+  "apiUrl": "http://127.0.0.1:8765",
+  "gatewayId": "urn:vcloud:gateway:addb1d02-7ea5-516b-a14b-a664b1c168c6",
+  "networkIds": [
+    "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+  ],
+  "authentication": "BearerToken"
+}

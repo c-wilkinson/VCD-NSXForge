@@ -37,7 +37,7 @@ Invoke-TestCase -Name 'Mocked API returns firewall rules using NSX-T v2 endpoint
     Assert-Equal 'Web' $result.userDefinedRules[0].name
     Assert-Equal 'GET' $calls[0].Method
     Assert-True ($calls[0].Uri -like 'https://vcd.example.test/cloudapi/2.0.0/edgeGateways/*/firewall/rules')
-    Assert-Equal 'application/*+json;version=39.0' $calls[0].Headers.Accept
+    Assert-Equal 'application/json;version=39.0' $calls[0].Headers.Accept
 }
 
 Invoke-TestCase -Name 'Mocked API paginates firewall groups and preserves filtered gateway ID' -Body {
@@ -126,4 +126,12 @@ Invoke-TestCase -Name 'Fixture-backed fake VCD handles every Phase 1 API request
     Assert-True ((@($fake.Calls | Where-Object { $_.Method -ne 'GET' })).Count -eq 0)
     Assert-Throws { & $fake.RequestSender ([pscustomobject]@{ Method='POST'; Uri='https://vcd.example.test/cloudapi/1.0.0/firewallGroups' }) }
     Assert-Throws { & $fake.RequestSender ([pscustomobject]@{ Method='GET'; Uri='https://vcd.example.test/unexpected' }) }
+}
+
+Invoke-TestCase -Name 'VCD reader rejects incomplete pagination with inconsistent resultTotal' -Body {
+    $client = New-VcdApiClient -BaseUri 'https://vcd.example.test' -RequestSender {
+        param($request)
+        [pscustomobject]@{ page=1; pageCount=1; resultTotal=2; values=@([pscustomobject]@{id='one'}) }
+    }
+    Assert-Throws { Get-VcdFirewallGroups -Client $client -GatewayId 'gateway' } 'Incomplete paging must block snapshots'
 }

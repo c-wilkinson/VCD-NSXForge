@@ -1,0 +1,1 @@
+{"status":"REALIZED","systemRules":[],"userDefinedRules":[{"id":"urn:vcloud:firewallRule:11111111-1111-4111-8111-111111111111","name":"Allow App","description":"example","sourceFirewallGroups":[{"id":"urn:vcloud:firewallGroup:22222222-2222-4222-8222-222222222222"}],"destinationFirewallGroups":[],"actionValue":"ALLOW","active":true,"logging":true}],"defaultRules":[]}

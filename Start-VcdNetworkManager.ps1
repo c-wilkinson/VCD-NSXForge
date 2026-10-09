@@ -27,7 +27,7 @@ $window = $null
 try {
     [System.Windows.Forms.Application]::EnableVisualStyles()
     $logger = Start-AppLogger -ApplicationRoot $root -Directory $logsPath -MaximumBytes $config.logging.maximumFileBytes -RetentionDays $config.logging.retentionDays -MinimumLevel $config.logging.level
-    Write-AppLog -Logger $logger -Component 'Bootstrap' -Message 'VCD Network Manager Phase 2 started'
+    Write-AppLog -Logger $logger -Component 'Bootstrap' -Message 'VCD Network Manager Phase 3 started'
     $dispatcher = New-WorkerDispatcher -ApplicationRoot $root -Logger $logger -MaximumWorkers $config.runtime.maximumWorkers
     $window = New-NetworkManagerForm -Configuration $config -Dispatcher $dispatcher -Logger $logger
     [System.Windows.Forms.Application]::Run($window.Form)
@@ -42,7 +42,7 @@ finally {
         Close-WorkerDispatcher -Dispatcher $dispatcher
     }
     if ($null -ne $logger) {
-        Write-AppLog -Logger $logger -Component 'Bootstrap' -Message 'VCD Network Manager Phase 2 stopped'
+        Write-AppLog -Logger $logger -Component 'Bootstrap' -Message 'VCD Network Manager Phase 3 stopped'
         Stop-AppLogger -Logger $logger
     }
 }

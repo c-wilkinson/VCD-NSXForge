@@ -24,7 +24,7 @@ function Start-BackgroundOperation {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]$Dispatcher,
-        [Parameter(Mandatory)][ValidateSet('ProgressDemo','FailureDemo','OfflinePlan')][string]$Operation,
+        [Parameter(Mandatory)][ValidateSet('ProgressDemo','FailureDemo','OfflinePlan','VcdRead')][string]$Operation,
         [hashtable]$Arguments = @{}
     )
     $id = [guid]::NewGuid().ToString('n')

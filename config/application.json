@@ -1,27 +1,40 @@
-{
-  "schemaVersion": 1,
-  "product": "VCD Network Manager",
-  "target": {
-    "vcdVersion": "10.6",
-    "networkBacking": "NSX-T",
-    "powershellVersion": "5.1",
-    "mode": "Offline / Phase 2"
-  },
-  "runtime": {
-    "maximumWorkers": 3,
-    "uiPollMilliseconds": 100
-  },
-  "logging": {
-    "directory": "logs",
-    "maximumFileBytes": 5000000,
-    "retentionDays": 30,
-    "level": "INFO"
-  },
-  "state": {
-    "directory": "state",
-    "defaultEnvironment": "demo",
-    "defaultScope": "edge-gw-demo",
-    "reportsDirectory": "reports",
-    "demoDirectory": "examples/demo-state"
-  }
+﻿{
+    "schemaVersion":  1,
+    "product":  "VCD Network Manager",
+    "target":  {
+                   "vcdVersion":  "10.6",
+                   "networkBacking":  "NSX-T",
+                   "powershellVersion":  "5.1",
+                   "mode":  "Read-only VCD / Phase 3"
+               },
+    "runtime":  {
+                    "maximumWorkers":  3,
+                    "uiPollMilliseconds":  100
+                },
+    "logging":  {
+                    "directory":  "logs",
+                    "maximumFileBytes":  5000000,
+                    "retentionDays":  30,
+                    "level":  "INFO"
+                },
+    "state":  {
+                  "directory":  "state",
+                  "defaultEnvironment":  "demo",
+                  "defaultScope":  "edge-gw-demo",
+                  "reportsDirectory":  "reports",
+                  "demoDirectory":  "examples/demo-state"
+              },
+    "vcd":  {
+                "mode":  "Simulator",
+                "apiUrl":  "http://127.0.0.1:8765",
+                "apiVersion":  "39.0",
+                "gatewayId":  "urn:vcloud:gateway:addb1d02-7ea5-516b-a14b-a664b1c168c6",
+                "networkIds":  [
+                                   "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+                               ],
+                "tenantContextOrgId":  "",
+                "timeoutSeconds":  30,
+                "authentication":  "BearerToken",
+                "loginScope":  "Tenant"
+            }
 }

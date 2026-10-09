@@ -12,10 +12,10 @@ function New-NetworkManagerForm {
     )
     $form = [System.Windows.Forms.Form]::new()
     $form.Name = 'MainForm'
-    $form.Text = 'VCD Network Manager - Phase 2 (Offline)'
+    $form.Text = if ($Configuration.vcd.mode -eq 'Simulator') { 'VCD Network Manager - Local Simulator' } else { 'VCD Network Manager - Read-only VCD' }
     $form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
-    $form.ClientSize = [System.Drawing.Size]::new(850, 545)
-    $form.MinimumSize = [System.Drawing.Size]::new(880, 490)
+    $form.ClientSize = [System.Drawing.Size]::new(850, 620)
+    $form.MinimumSize = [System.Drawing.Size]::new(880, 620)
     $form.Font = [System.Drawing.Font]::new('Segoe UI', 10)
     $form.BackColor = [System.Drawing.Color]::White
     $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Font
@@ -27,7 +27,7 @@ function New-NetworkManagerForm {
     $heading.Anchor = 'Top, Left, Right'
 
     $subtitle = [System.Windows.Forms.Label]::new()
-    $subtitle.Text = 'Target: VCD 10.6 | NSX-T | Windows PowerShell 5.1 | No live VCD connection'
+    $subtitle.Text = 'Target: VCD 10.6 | NSX-T | Windows PowerShell 5.1 | Configurable read-only VCD API'
     $subtitle.SetBounds(26, 62, 780, 26)
     $subtitle.ForeColor = [System.Drawing.Color]::DimGray
     $subtitle.Anchor = 'Top, Left, Right'
@@ -51,20 +51,31 @@ function New-NetworkManagerForm {
     $planButton.SetBounds(590, 111, 229, 37)
     $planButton.Anchor = 'Top, Right'
 
+    $readVcdButton = [System.Windows.Forms.Button]::new()
+    $readVcdButton.Name = 'ReadVcdButton'
+    $readVcdButton.Text = 'Read VCD snapshot'
+    $readVcdButton.SetBounds(26, 166, 202, 37)
+    $endpointLabel = [System.Windows.Forms.Label]::new()
+    $endpointLabel.Name = 'VcdEndpointLabel'
+    $endpointLabel.Text = if ($Configuration.vcd.apiUrl) { $(if ($Configuration.vcd.mode -eq 'Simulator') { 'SIMULATOR: ' } else { 'VCD API: ' }) + [string]$Configuration.vcd.apiUrl } else { 'VCD API: not configured (edit config/application.json)' }
+    $endpointLabel.SetBounds(245, 174, 568, 25)
+    $endpointLabel.ForeColor = [System.Drawing.Color]::DimGray
+    $endpointLabel.Anchor = 'Top, Left, Right'
+
     $statusTitle = [System.Windows.Forms.Label]::new()
     $statusTitle.Text = 'Status'
     $statusTitle.Font = [System.Drawing.Font]::new('Segoe UI Semibold', 11)
-    $statusTitle.SetBounds(26, 172, 240, 25)
+    $statusTitle.SetBounds(26, 235, 240, 25)
 
     $status = [System.Windows.Forms.Label]::new()
     $status.Name = 'StatusLabel'
     $status.Text = 'Ready: choose a demonstration operation.'
-    $status.SetBounds(26, 201, 790, 25)
+    $status.SetBounds(26, 264, 790, 25)
     $status.Anchor = 'Top, Left, Right'
 
     $progress = [System.Windows.Forms.ProgressBar]::new()
     $progress.Name = 'ProgressBar'
-    $progress.SetBounds(26, 233, 790, 20)
+    $progress.SetBounds(26, 296, 790, 20)
     $progress.Anchor = 'Top, Left, Right'
     $progress.Minimum = 0
     $progress.Maximum = 100
@@ -72,32 +83,32 @@ function New-NetworkManagerForm {
     $threadNote = [System.Windows.Forms.Label]::new()
     $threadNote.Name = 'ThreadLabel'
     $threadNote.Text = ('UI thread: {0} | Worker thread: not started | UI timer: 0 ticks' -f [System.Threading.Thread]::CurrentThread.ManagedThreadId)
-    $threadNote.SetBounds(26, 265, 790, 24)
+    $threadNote.SetBounds(26, 328, 790, 24)
     $threadNote.ForeColor = [System.Drawing.Color]::DimGray
     $threadNote.Anchor = 'Top, Left, Right'
 
     $eventsHeading = [System.Windows.Forms.Label]::new()
     $eventsHeading.Text = 'Operation events (UI remains interactive)'
     $eventsHeading.Font = [System.Drawing.Font]::new('Segoe UI Semibold', 11)
-    $eventsHeading.SetBounds(26, 304, 765, 25)
+    $eventsHeading.SetBounds(26, 367, 765, 25)
 
     $events = [System.Windows.Forms.TextBox]::new()
     $events.Name = 'EventsTextBox'
     $events.Multiline = $true
     $events.ReadOnly = $true
     $events.ScrollBars = [System.Windows.Forms.ScrollBars]::Vertical
-    $events.SetBounds(26, 335, 790, 155)
+    $events.SetBounds(26, 398, 790, 158)
     $events.Anchor = 'Top, Bottom, Left, Right'
     $events.Font = [System.Drawing.Font]::new('Consolas', 9)
     $events.BackColor = [System.Drawing.Color]::FromArgb(247, 248, 250)
 
     $footer = [System.Windows.Forms.Label]::new()
-    $footer.Text = 'Phase 2: offline plan only; no infrastructure changes. Logs rotate at 5 MB and expire after 30 days.'
-    $footer.SetBounds(26, 510, 795, 23)
+    $footer.Text = 'Phase 3: read-only VCD snapshots; no infrastructure changes. Logs rotate at 5 MB and expire after 30 days.'
+    $footer.SetBounds(26, 585, 795, 23)
     $footer.ForeColor = [System.Drawing.Color]::DimGray
     $footer.Anchor = 'Left, Right, Bottom'
 
-    foreach ($control in @($heading,$subtitle,$run,$fail,$cancel,$planButton,$statusTitle,$status,$progress,$threadNote,$eventsHeading,$events,$footer)) {
+    foreach ($control in @($heading,$subtitle,$run,$fail,$cancel,$planButton,$readVcdButton,$endpointLabel,$statusTitle,$status,$progress,$threadNote,$eventsHeading,$events,$footer)) {
         [void]$form.Controls.Add($control)
     }
 
@@ -138,6 +149,7 @@ function New-NetworkManagerForm {
             $run.Enabled = $false
             $fail.Enabled = $false
             $planButton.Enabled = $false
+            $readVcdButton.Enabled = $false
             $cancel.Enabled = $true
             $progress.Value = 0
             $status.Text = 'Operation queued on background runspace...'
@@ -168,6 +180,31 @@ function New-NetworkManagerForm {
         }
         & $startOperation 'OfflinePlan' $arguments
     }.GetNewClosure())
+    $readVcdButton.Add_Click({
+        if (-not $Configuration.vcd.apiUrl -or -not $Configuration.vcd.gatewayId) {
+            $status.Text = 'Set vcd.apiUrl and vcd.gatewayId in config/application.json, then restart.'
+            & $logEvent 'VCD configuration is incomplete; no connection attempted.'
+            return
+        }
+        $simulatorMode = ($Configuration.vcd.PSObject.Properties.Name -contains 'mode' -and $Configuration.vcd.mode -ceq 'Simulator')
+        if (-not $simulatorMode -and $Configuration.vcd.authentication -cne 'Credential') {
+            $status.Text = 'WinForms supports Credential login; use tools/Invoke-VcdRead.ps1 for bearer tokens.'
+            return
+        }
+        $credential = $null
+        if (-not $simulatorMode) {
+            $credential = Get-Credential -Message 'Enter VCD username@org and password for read-only access'
+            if ($null -eq $credential) { return }
+        }
+        $vcdArguments = @{
+            VcdConfiguration = $Configuration.vcd
+            OutputDirectory = (Join-Path $Configuration.ApplicationRoot $Configuration.state.reportsDirectory)
+            ConnectionOnly = $false
+        }
+        if (-not $simulatorMode) { $vcdArguments.Credential = $credential }
+        & $startOperation 'VcdRead' $vcdArguments
+        $credential = $null
+    }.GetNewClosure())
     $cancel.Add_Click({
         if ($ui.ActiveOperationId) {
             & $commands.CancelWorker -Dispatcher $Dispatcher -OperationId $ui.ActiveOperationId
@@ -188,8 +225,9 @@ function New-NetworkManagerForm {
             if (-not (& $commands.UpdateState -State $ui -Event $item)) { continue }
             $status.Text = $ui.Message
             $progress.Value = $ui.Percent
-            if ($item.Type -eq 'PlanSummary') {
-                & $logEvent ("PLAN: $($item.Message)")
+            if ($item.Type -in @('PlanSummary','VcdSummary')) {
+                $kind = if ($item.Type -eq 'VcdSummary') { 'VCD' } else { 'PLAN' }
+                & $logEvent ("$($kind): $($item.Message)")
             }
             elseif ($item.Type -eq 'Progress') {
                 & $logEvent ("PROGRESS: $($item.Message)")
@@ -199,6 +237,7 @@ function New-NetworkManagerForm {
                 $run.Enabled = -not $ui.Closing
                 $fail.Enabled = -not $ui.Closing
                 $planButton.Enabled = -not $ui.Closing
+                $readVcdButton.Enabled = -not $ui.Closing
                 $cancel.Enabled = $false
             }
         }
@@ -221,6 +260,7 @@ function New-NetworkManagerForm {
             $run.Enabled = $false
             $fail.Enabled = $false
             $planButton.Enabled = $false
+            $readVcdButton.Enabled = $false
             $cancel.Enabled = $false
             $status.Text = 'Closing: cancelling active operations...'
             & $commands.CancelWorker -Dispatcher $Dispatcher

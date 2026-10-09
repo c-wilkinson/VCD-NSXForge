@@ -1,0 +1,377 @@
+{
+  "schemaVersion": 1,
+  "synthetic": true,
+  "description": "Synthetic-only lab. Trust governs cross-domain authentication; tier and explicit grant govern management. This is not NSX/VCD authorization.",
+  "domains": [
+    {
+      "name": "DomainA",
+      "trustedIdentityDomains": [],
+      "tiers": [
+        {
+          "id": 0,
+          "purpose": "Identity and privileged management"
+        },
+        {
+          "id": 1,
+          "purpose": "Workloads and general infrastructure"
+        }
+      ]
+    },
+    {
+      "name": "DomainB",
+      "trustedIdentityDomains": [
+        "DomainA"
+      ],
+      "tiers": [
+        {
+          "id": 0,
+          "purpose": "Identity and privileged management"
+        },
+        {
+          "id": 1,
+          "purpose": "Workloads and general infrastructure"
+        }
+      ]
+    },
+    {
+      "name": "DomainC",
+      "trustedIdentityDomains": [
+        "DomainA"
+      ],
+      "tiers": [
+        {
+          "id": 0,
+          "purpose": "Identity and privileged management"
+        },
+        {
+          "id": 1,
+          "purpose": "Workloads and general infrastructure"
+        }
+      ]
+    }
+  ],
+  "managementGrants": [
+    {
+      "sourceDomain": "DomainA",
+      "sourceTier": 0,
+      "targetDomain": "DomainB",
+      "targetTier": 1,
+      "action": "Manage"
+    },
+    {
+      "sourceDomain": "DomainA",
+      "sourceTier": 0,
+      "targetDomain": "DomainC",
+      "targetTier": 1,
+      "action": "Manage"
+    }
+  ],
+  "gateways": [
+    {
+      "name": "DomainA-T0-Edge",
+      "domain": "DomainA",
+      "tier": 0,
+      "gatewayId": "urn:vcloud:gateway:36467490-b431-5121-960f-aa88fd2acb76",
+      "networkId": "urn:vcloud:network:514655d8-986d-5762-8189-f9a8c4d10158",
+      "firewall": {
+        "status": "REALIZED",
+        "systemRules": [],
+        "userDefinedRules": [
+          {
+            "id": "urn:vcloud:firewallRule:7d63d778-e8fd-5844-8dd3-031d9849dfb2",
+            "name": "DomainA-T0-Allow-HTTPS",
+            "description": "Synthetic rule; no traffic is actually permitted",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:e4b3027a-1a2a-58ae-b929-527de83a0e0e"
+              }
+            ],
+            "destinationFirewallGroups": [],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true
+          }
+        ],
+        "defaultRules": []
+      },
+      "ipSets": [
+        {
+          "id": "urn:vcloud:firewallGroup:e4b3027a-1a2a-58ae-b929-527de83a0e0e",
+          "name": "DomainA-T0-Systems",
+          "description": "Synthetic addresses; not actual assets",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.10.10",
+            "10.50.10.11"
+          ]
+        }
+      ],
+      "reservations": [
+        {
+          "id": "urn:vcloud:networkManualIpReservation:e2f11d91-f1eb-5636-914f-610e148feafd",
+          "name": "DomainA-T0-Reserved",
+          "description": "Synthetic IP reservation",
+          "networkRef": {
+            "id": "urn:vcloud:network:514655d8-986d-5762-8189-f9a8c4d10158"
+          },
+          "ipAddresses": "10.50.10.50"
+        }
+      ]
+    },
+    {
+      "name": "DomainA-T1-Edge",
+      "domain": "DomainA",
+      "tier": 1,
+      "gatewayId": "urn:vcloud:gateway:2714910e-df73-5f47-9ce1-487adbb2d85a",
+      "networkId": "urn:vcloud:network:7e56eb2e-81f1-5556-b56a-631aaaedbe73",
+      "firewall": {
+        "status": "REALIZED",
+        "systemRules": [],
+        "userDefinedRules": [
+          {
+            "id": "urn:vcloud:firewallRule:6f0a9af1-f5b9-5117-931b-5762bc405d6d",
+            "name": "DomainA-T1-Allow-HTTPS",
+            "description": "Synthetic rule; no traffic is actually permitted",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:9d6ea4eb-e5d4-5817-9868-5222dff4bde3"
+              }
+            ],
+            "destinationFirewallGroups": [],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true
+          }
+        ],
+        "defaultRules": []
+      },
+      "ipSets": [
+        {
+          "id": "urn:vcloud:firewallGroup:9d6ea4eb-e5d4-5817-9868-5222dff4bde3",
+          "name": "DomainA-T1-Systems",
+          "description": "Synthetic addresses; not actual assets",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.20.10",
+            "10.50.20.11"
+          ]
+        }
+      ],
+      "reservations": [
+        {
+          "id": "urn:vcloud:networkManualIpReservation:3909c58a-88a3-5fc1-bc7b-bd5951d964aa",
+          "name": "DomainA-T1-Reserved",
+          "description": "Synthetic IP reservation",
+          "networkRef": {
+            "id": "urn:vcloud:network:7e56eb2e-81f1-5556-b56a-631aaaedbe73"
+          },
+          "ipAddresses": "10.50.20.50"
+        }
+      ]
+    },
+    {
+      "name": "DomainB-T0-Edge",
+      "domain": "DomainB",
+      "tier": 0,
+      "gatewayId": "urn:vcloud:gateway:dc77b0fa-7120-5d88-beaa-4185575d27b3",
+      "networkId": "urn:vcloud:network:a59be514-3f33-52b6-841f-49ef666af221",
+      "firewall": {
+        "status": "REALIZED",
+        "systemRules": [],
+        "userDefinedRules": [
+          {
+            "id": "urn:vcloud:firewallRule:c216332c-18ca-5341-8134-0da6d9486b3a",
+            "name": "DomainB-T0-Allow-HTTPS",
+            "description": "Synthetic rule; no traffic is actually permitted",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:1b18e97d-fbe1-5825-8bbf-706bb770d4b0"
+              }
+            ],
+            "destinationFirewallGroups": [],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true
+          }
+        ],
+        "defaultRules": []
+      },
+      "ipSets": [
+        {
+          "id": "urn:vcloud:firewallGroup:1b18e97d-fbe1-5825-8bbf-706bb770d4b0",
+          "name": "DomainB-T0-Systems",
+          "description": "Synthetic addresses; not actual assets",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.10.10",
+            "10.51.10.11"
+          ]
+        }
+      ],
+      "reservations": [
+        {
+          "id": "urn:vcloud:networkManualIpReservation:753eb89f-9e4c-5a5b-9483-0e34fe390fa5",
+          "name": "DomainB-T0-Reserved",
+          "description": "Synthetic IP reservation",
+          "networkRef": {
+            "id": "urn:vcloud:network:a59be514-3f33-52b6-841f-49ef666af221"
+          },
+          "ipAddresses": "10.51.10.50"
+        }
+      ]
+    },
+    {
+      "name": "DomainB-T1-Edge",
+      "domain": "DomainB",
+      "tier": 1,
+      "gatewayId": "urn:vcloud:gateway:addb1d02-7ea5-516b-a14b-a664b1c168c6",
+      "networkId": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+      "firewall": {
+        "status": "REALIZED",
+        "systemRules": [],
+        "userDefinedRules": [
+          {
+            "id": "urn:vcloud:firewallRule:4505560c-7afa-5bc0-978c-3c1f38cb2375",
+            "name": "DomainB-T1-Allow-HTTPS",
+            "description": "Synthetic rule; no traffic is actually permitted",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:b8139949-5406-5650-abdb-910fbc2c0400"
+              }
+            ],
+            "destinationFirewallGroups": [],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true
+          }
+        ],
+        "defaultRules": []
+      },
+      "ipSets": [
+        {
+          "id": "urn:vcloud:firewallGroup:b8139949-5406-5650-abdb-910fbc2c0400",
+          "name": "DomainB-T1-Systems",
+          "description": "Synthetic addresses; not actual assets",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.10",
+            "10.51.20.11"
+          ]
+        }
+      ],
+      "reservations": [
+        {
+          "id": "urn:vcloud:networkManualIpReservation:8b628402-0c41-5a70-8d09-0a120f2dd977",
+          "name": "DomainB-T1-Reserved",
+          "description": "Synthetic IP reservation",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.50"
+        }
+      ]
+    },
+    {
+      "name": "DomainC-T0-Edge",
+      "domain": "DomainC",
+      "tier": 0,
+      "gatewayId": "urn:vcloud:gateway:e552549b-6b45-5435-b37a-5e2ef1a10f42",
+      "networkId": "urn:vcloud:network:4201c987-ccdc-59b1-8afe-607bd96b539d",
+      "firewall": {
+        "status": "REALIZED",
+        "systemRules": [],
+        "userDefinedRules": [
+          {
+            "id": "urn:vcloud:firewallRule:72be5210-7bd9-5fa1-953c-65bd1a80f950",
+            "name": "DomainC-T0-Allow-HTTPS",
+            "description": "Synthetic rule; no traffic is actually permitted",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:1162eeda-e7c3-518a-9a01-fe93324bbeaf"
+              }
+            ],
+            "destinationFirewallGroups": [],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true
+          }
+        ],
+        "defaultRules": []
+      },
+      "ipSets": [
+        {
+          "id": "urn:vcloud:firewallGroup:1162eeda-e7c3-518a-9a01-fe93324bbeaf",
+          "name": "DomainC-T0-Systems",
+          "description": "Synthetic addresses; not actual assets",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.10.10",
+            "10.52.10.11"
+          ]
+        }
+      ],
+      "reservations": [
+        {
+          "id": "urn:vcloud:networkManualIpReservation:e6c2ac0e-7057-563a-b2e8-52c01690c288",
+          "name": "DomainC-T0-Reserved",
+          "description": "Synthetic IP reservation",
+          "networkRef": {
+            "id": "urn:vcloud:network:4201c987-ccdc-59b1-8afe-607bd96b539d"
+          },
+          "ipAddresses": "10.52.10.50"
+        }
+      ]
+    },
+    {
+      "name": "DomainC-T1-Edge",
+      "domain": "DomainC",
+      "tier": 1,
+      "gatewayId": "urn:vcloud:gateway:a7be6e37-afbc-5382-9038-839ae54c16ae",
+      "networkId": "urn:vcloud:network:02f7f342-5349-5a15-8c6d-1b3dfae003c3",
+      "firewall": {
+        "status": "REALIZED",
+        "systemRules": [],
+        "userDefinedRules": [
+          {
+            "id": "urn:vcloud:firewallRule:8a64174b-4e6f-50cd-89ac-57dfdaa734d3",
+            "name": "DomainC-T1-Allow-HTTPS",
+            "description": "Synthetic rule; no traffic is actually permitted",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:d37c9f06-6ee5-597f-8a47-76a08c2c6942"
+              }
+            ],
+            "destinationFirewallGroups": [],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true
+          }
+        ],
+        "defaultRules": []
+      },
+      "ipSets": [
+        {
+          "id": "urn:vcloud:firewallGroup:d37c9f06-6ee5-597f-8a47-76a08c2c6942",
+          "name": "DomainC-T1-Systems",
+          "description": "Synthetic addresses; not actual assets",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.20.10",
+            "10.52.20.11"
+          ]
+        }
+      ],
+      "reservations": [
+        {
+          "id": "urn:vcloud:networkManualIpReservation:4f50c53b-a4c6-508b-b1ae-89d888ef5d3f",
+          "name": "DomainC-T1-Reserved",
+          "description": "Synthetic IP reservation",
+          "networkRef": {
+            "id": "urn:vcloud:network:02f7f342-5349-5a15-8c6d-1b3dfae003c3"
+          },
+          "ipAddresses": "10.52.20.50"
+        }
+      ]
+    }
+  ]
+}

@@ -46,6 +46,37 @@ function Read-AppConfiguration {
         $value = [string]$configuration.state.$setting
         if ($value -cnotmatch '^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$') { throw "Invalid state setting '$setting'." }
     }
+    # No remote calls are attempted until an administrator supplies a URL and target IDs.
+    if ($configuration.PSObject.Properties.Name -cnotcontains 'vcd') { throw 'VCD connection configuration is missing.' }
+    $vcd = $configuration.vcd
+    $mode = if ($vcd.PSObject.Properties.Name -contains 'mode') { [string]$vcd.mode } else { 'Live' }
+    if ($mode -cnotin @('Live','Simulator')) { throw 'vcd.mode must be Live or Simulator.' }
+    $address = [string]$vcd.apiUrl
+    if ($address) {
+        $uri = $null
+        if (-not [uri]::TryCreate($address, [System.UriKind]::Absolute, [ref]$uri) -or
+            -not [string]::IsNullOrEmpty($uri.UserInfo) -or $uri.AbsolutePath -cne '/' -or $uri.Query -or $uri.Fragment) {
+            throw 'vcd.apiUrl must be an origin without path, credentials or query.'
+        }
+        if ($mode -eq 'Live' -and $uri.Scheme -cne 'https') {
+            throw 'Live VCD connections require HTTPS.'
+        }
+        if ($mode -eq 'Simulator' -and ($uri.Scheme -cne 'http' -or $uri.Host -cne '127.0.0.1')) {
+            throw 'Simulator connections require http://127.0.0.1:<port> only.'
+        }
+    }
+    if ($vcd.apiVersion -cne '39.0') { throw 'Phase 3 requires VCD OpenAPI version 39.0.' }
+    if ($vcd.loginScope -cnotin @('Tenant','Provider')) { throw 'vcd.loginScope must be Tenant or Provider.' }
+    if ($vcd.authentication -cnotin @('Credential','BearerToken')) { throw 'Unsupported VCD authentication setting.' }
+    if ($vcd.timeoutSeconds -isnot [int] -or $vcd.timeoutSeconds -lt 5 -or $vcd.timeoutSeconds -gt 180) { throw 'VCD timeoutSeconds must be 5..180.' }
+    if ($null -eq $vcd.networkIds -or $vcd.networkIds -isnot [array]) { throw 'vcd.networkIds must be a JSON array.' }
+    foreach ($id in @($vcd.networkIds) + @($vcd.gatewayId, $vcd.tenantContextOrgId)) {
+        if ($null -eq $id -or $id -eq '') { continue }
+        if ($id -isnot [string] -or $id -notmatch '^urn:vcloud:[A-Za-z0-9_-]+:[a-fA-F0-9-]{8,}$') {
+            throw 'VCD resource identifiers must be full URNs, not names or arbitrary paths.'
+        }
+    }
+    if (@($vcd.networkIds | Select-Object -Unique).Count -ne @($vcd.networkIds).Count) { throw 'Duplicate VCD network IDs.' }
     $configuration | Add-Member -NotePropertyName ApplicationRoot -NotePropertyValue $ApplicationRoot
     $configuration
 }

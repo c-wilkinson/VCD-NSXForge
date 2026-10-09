@@ -14,6 +14,9 @@ if ($RunUiTests -and [Environment]::UserInteractive -and $PSVersionTable.PSEditi
             $logger = Start-AppLogger -ApplicationRoot $ProjectRoot -Directory $scratch -MaximumBytes 5000000 -RetentionDays 30
             $dispatcher = New-WorkerDispatcher -ApplicationRoot $ProjectRoot -Logger $logger -MaximumWorkers 2
             $cfg = Read-AppConfiguration -ApplicationRoot $ProjectRoot
+            # Smoke tests must not contact or prompt for a configured real VCD host.
+            $cfg.vcd.apiUrl = ''
+            $cfg.vcd.gatewayId = ''
             $window = New-NetworkManagerForm -Configuration $cfg -Dispatcher $dispatcher -Logger $logger
             $window.Form.Show()
             [System.Windows.Forms.Application]::DoEvents()
@@ -46,6 +49,12 @@ if ($RunUiTests -and [Environment]::UserInteractive -and $PSVersionTable.PSEditi
             [System.Windows.Forms.Application]::DoEvents()
             Assert-True ($status.Text -match '^Completed:') "Offline plan UI failed: $($status.Text); events: $($eventsBox.Text)"
             Assert-True ($eventsBox.Text -match 'PLAN: .*HTML=') 'Report path missing from UI event log'
+
+            $vcdButton = $window.Form.Controls.Find('ReadVcdButton', $true)[0]
+            Assert-True ($null -ne $vcdButton) 'Missing Phase 3 read-only VCD button'
+            $vcdButton.PerformClick()
+            Assert-True ($status.Text -match 'vcd.apiUrl') 'Unconfigured endpoint should not start HTTP or prompt for credentials'
+            Assert-Equal 0 (Get-RunningOperationCount -Dispatcher $dispatcher)
 
             $failureButton = $window.Form.Controls.Find('FailureDemoButton', $true)[0]
             $failureButton.PerformClick()

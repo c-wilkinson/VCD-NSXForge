@@ -55,3 +55,13 @@ Invoke-TestCase -Name 'UI state accepts plan summary only for its active operati
     Assert-Equal 'Plan ready' $state.Message
     Assert-Equal 95 $state.Percent
 }
+
+Invoke-TestCase -Name 'UI state accepts read-only VCD summary for the active operation only' -Body {
+    $state = New-UiOperationState
+    Set-UiOperationStarted -State $state -OperationId 'vcd01'
+    $evt = [pscustomobject]@{Type='VcdSummary';OperationId='vcd01';Message='VCD connection OK';Percent=95}
+    Assert-True (Update-UiOperationState -State $state -Event $evt)
+    Assert-Equal 95 $state.Percent
+    Assert-Equal 'VCD connection OK' $state.Message
+    Assert-True (-not (Update-UiOperationState -State $state -Event ([pscustomobject]@{Type='VcdSummary';OperationId='old';Message='stale';Percent=1})))
+}

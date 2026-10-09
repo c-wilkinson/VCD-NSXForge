@@ -55,6 +55,29 @@ try {
             $CancellationToken.ThrowIfCancellationRequested()
             Send-WorkerProgress -Message 'Offline plan report created (no VCD calls)' -Percent 100
         }
+        'VcdRead' {
+            $CancellationToken.ThrowIfCancellationRequested()
+            Send-WorkerProgress -Message 'Discovering VCD API versions and authenticating' -Percent 10
+            Import-Module (Join-Path $ApplicationRoot 'src\Application\VcdRead\VcdReadOperation.psm1') -Force
+            $parameters = @{
+                VcdConfiguration = $Arguments.VcdConfiguration
+                OutputDirectory = [string]$Arguments.OutputDirectory
+                CancellationToken = $CancellationToken
+                ConnectionOnly = [bool]$Arguments.ConnectionOnly
+            }
+            if ($Arguments.ContainsKey('Credential') -and $null -ne $Arguments.Credential) { $parameters.Credential = $Arguments.Credential }
+            elseif ($Arguments.ContainsKey('BearerToken') -and $null -ne $Arguments.BearerToken) { $parameters.BearerToken = [string]$Arguments.BearerToken }
+            # This operation is read-only; observed import is enabled only for explicit CLI use.
+            $result = Invoke-VcdReadOperation @parameters
+            $CancellationToken.ThrowIfCancellationRequested()
+            $EventQueue.Enqueue([pscustomobject]@{
+                Type = 'VcdSummary'; OperationId = $OperationId
+                Message = ('VCD connection OK; snapshot={0}; rules={1}; IP Sets={2}; reservations={3}' -f $result.SnapshotPath,$result.FirewallRuleCount,$result.IpSetCount,$result.ReservationCount)
+                Percent = 95; WorkerThreadId = [System.Threading.Thread]::CurrentThread.ManagedThreadId
+            })
+            Write-AppLog -Logger $Logger -Component 'VcdRead' -Level 'INFO' -OperationId $OperationId -Message 'Read-only VCD snapshot completed' -Properties @{ snapshot = $result.SnapshotPath }
+            Send-WorkerProgress -Message 'Read-only VCD API snapshot complete' -Percent 100
+        }
         'FailureDemo' {
             Send-WorkerProgress -Message 'Preparing simulated failure' -Percent 15
             [System.Threading.Thread]::Sleep(300)

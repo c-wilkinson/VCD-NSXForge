@@ -1,0 +1,1 @@
+{"id":"urn:vcloud:firewallGroup:22222222-2222-4222-8222-222222222222","name":"App Servers","description":"Test group","typeValue":"IP_SET","ipAddresses":["10.1.2.3","10.1.2.4"]}
