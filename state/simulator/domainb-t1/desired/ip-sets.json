@@ -1,0 +1,15 @@
+{
+    "schemaVersion":  2,
+    "resourceKind":  "ipSets",
+    "items":  [
+                  {
+                      "key":  "vcd-b8139949-5406-5650-abdb-910fbc2c0400",
+                      "name":  "DomainB-T1-Systems",
+                      "description":  "Synthetic addresses; not actual assets",
+                      "addresses":  [
+                                        "10.51.20.10",
+                                        "10.51.20.11"
+                                    ]
+                  }
+              ]
+}

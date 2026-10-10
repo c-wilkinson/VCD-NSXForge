@@ -1,0 +1,42 @@
+{
+    "schemaVersion":  2,
+    "resourceKind":  "edgeFirewallRules",
+    "items":  [
+                  {
+                      "key":  "vcd-4505560c-7afa-5bc0-978c-3c1f38cb2375",
+                      "name":  "DomainB-T1-Allow-HTTPS",
+                      "description":  "Synthetic rule; no traffic is actually permitted",
+                      "order":  0,
+                      "action":  "DROP",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-b8139949-5406-5650-abdb-910fbc2c0400"
+                                       ],
+                      "destinationIpSets":  [
+
+                                            ],
+                      "services":  [
+
+                                   ]
+                  },
+                  {
+                      "key":  "test",
+                      "name":  "Test",
+                      "description":  "",
+                      "order":  1,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-b8139949-5406-5650-abdb-910fbc2c0400"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-b8139949-5406-5650-abdb-910fbc2c0400"
+                                            ],
+                      "services":  [
+
+                                   ]
+                  }
+              ]
+}

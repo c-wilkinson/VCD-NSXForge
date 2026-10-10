@@ -130,4 +130,11 @@ function New-NetworkChangePlan {
     }
 }
 
-Export-ModuleMember -Function New-NetworkChangePlan
+function Test-NetworkStateView {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Documents)
+    Confirm-NetworkStateViewModel -View ([pscustomobject]@{Documents=$Documents})
+    return $true
+}
+
+Export-ModuleMember -Function New-NetworkChangePlan, Test-NetworkStateView

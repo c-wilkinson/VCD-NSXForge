@@ -15,3 +15,10 @@ Thumbs.db
 state/**/observed/
 state/**/applied/
 *.lock
+
+# Local-only configuration backup created by simulator setup
+config/application.json.before-simulator
+
+# Synthetic simulator edits (runtime only; never commit)
+simulator/runtime-state.json
+simulator/runtime-state.json.*

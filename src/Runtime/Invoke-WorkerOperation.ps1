@@ -78,6 +78,67 @@ try {
             Write-AppLog -Logger $Logger -Component 'VcdRead' -Level 'INFO' -OperationId $OperationId -Message 'Read-only VCD snapshot completed' -Properties @{ snapshot = $result.SnapshotPath }
             Send-WorkerProgress -Message 'Read-only VCD API snapshot complete' -Percent 100
         }
+        { $_ -in @('SimulatorScopes','SimulatorLoadState','SimulatorPlan','SimulatorApply','SimulatorTraffic','SimulatorSaveDraft') } {
+            Import-Module (Join-Path $ApplicationRoot 'src\Application\Simulator\SimulatorClient.psm1') -ErrorAction Stop
+            $CancellationToken.ThrowIfCancellationRequested()
+            Send-WorkerProgress -Message 'Working with local synthetic simulator' -Percent 15
+            $url=[string]$Arguments.ApiUrl
+            $name='';$payload=$null;$description=''
+            switch ($Operation) {
+                'SimulatorScopes' {
+                    $payload=Invoke-SimulatorApi -ApiUrl $url -Method GET -Resource scopes -CancellationToken $CancellationToken
+                    $name='Scopes';$description='Synthetic scopes loaded'
+                }
+                'SimulatorLoadState' {
+                    $state=Invoke-SimulatorApi -ApiUrl $url -Method GET -Resource state -GatewayId ([string]$Arguments.GatewayId) -CancellationToken $CancellationToken
+                    $history=Invoke-SimulatorApi -ApiUrl $url -Method GET -Resource traffic -GatewayId ([string]$Arguments.GatewayId) -CancellationToken $CancellationToken
+                    $payload=[pscustomobject]@{State=$state;Events=@($history.events)}
+                    $name='State';$description=('Synthetic state revision {0} retrieved' -f $state.revision)
+                }
+                'SimulatorPlan' {
+                    $approved=Get-SimulatorDraftPlan -Baseline $Arguments.Baseline -DesiredDocuments $Arguments.Documents
+                    Import-Module (Join-Path $ApplicationRoot 'src\Application\Planning\OfflinePlan.psm1') -ErrorAction Stop
+                    $path=Export-OfflineNetworkPlan -Plan $approved.plan -OutputDirectory ([string]$Arguments.OutputDirectory) -BaseName ('simulator-plan-'+[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss-fff'))
+                    $counts=$approved.plan.summary
+                    $description='Plan: +{0} ~{1} >{2} -{3}; blocked={4}; {5}' -f $counts.Create,$counts.Update,$counts.Move,$counts.Delete,$approved.plan.blocked,$path.Html
+                    $payload=[pscustomobject]@{Approved=$approved;Summary=$description}
+                    $name='Plan'
+                }
+                'SimulatorApply' {
+                    Send-WorkerProgress -Message 'Checking approved plan and committing synthetic resources' -Percent 50
+                    $result=Invoke-SimulatorApprovedApply -ApiUrl $url -Approved $Arguments.Approved -ActorDomain ([string]$Arguments.ActorDomain) -ActorTier ([int]$Arguments.ActorTier) -CancellationToken $CancellationToken
+                    $description='Synthetic deployment revision '+$result.revision
+                    $payload=[pscustomobject]@{Message=$description;Result=$result};$name='Apply'
+                }
+                'SimulatorTraffic' {
+                    $request=[pscustomobject]@{gatewayId=[string]$Arguments.GatewayId;sourceIp=[string]$Arguments.SourceIp;destinationIp=[string]$Arguments.DestinationIp;protocol=[string]$Arguments.Protocol;destinationPort=[int]$Arguments.DestinationPort}
+                    $result=Invoke-SimulatorApi -ApiUrl $url -Method POST -Resource traffic -Payload $request -CancellationToken $CancellationToken
+                    $description='{0} {1}:{2} -> {3}:{4} matched {5}' -f $result.verdict,$result.sourceIp,$result.protocol,$result.destinationIp,$result.destinationPort,$result.matchedRuleName
+                    $history=Invoke-SimulatorApi -ApiUrl $url -Method GET -Resource traffic -GatewayId ([string]$Arguments.GatewayId) -CancellationToken $CancellationToken
+                    $payload=[pscustomobject]@{Message=$description;Event=$result;Events=@($history.events)};$name='Traffic'
+                }
+                'SimulatorSaveDraft' {
+                    Import-Module (Join-Path $ApplicationRoot 'src\Infrastructure\State\StateRepository.psm1') -ErrorAction Stop
+                    $files=0
+                    foreach ($kind in @('ipSets','edgeFirewallRules','manualIpReservations')) {
+                        $CancellationToken.ThrowIfCancellationRequested()
+                        $doc=$Arguments.Documents[$kind]
+                        $path=Get-NetworkStateDocumentPath -StateRoot ([string]$Arguments.StateRoot) -Environment 'simulator' -Scope ([string]$Arguments.Scope) -View desired -ResourceKind $kind
+                        $checksum=Get-NetworkFileSha256 -Path $path
+                        $null=Save-NetworkStateDocument -StateRoot ([string]$Arguments.StateRoot) -Environment 'simulator' -Scope ([string]$Arguments.Scope) -View desired -Document $doc -ExpectedSha256 $checksum
+                        $files++
+                    }
+                    $description="Saved $files desired JSON files to the local simulator state repository"
+                    $payload=[pscustomobject]@{Message=$description};$name='Draft'
+                }
+            }
+            $CancellationToken.ThrowIfCancellationRequested()
+            $EventQueue.Enqueue([pscustomobject]@{
+                Type='SimulatorData';Name=$name;Message=$description;Payload=$payload
+                OperationId=$OperationId;Percent=95;WorkerThreadId=[Threading.Thread]::CurrentThread.ManagedThreadId
+            })
+            Send-WorkerProgress -Message $description -Percent 100
+        }
         'FailureDemo' {
             Send-WorkerProgress -Message 'Preparing simulated failure' -Percent 15
             [System.Threading.Thread]::Sleep(300)

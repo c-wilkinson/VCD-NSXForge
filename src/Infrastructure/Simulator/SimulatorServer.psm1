@@ -1,8 +1,9 @@
-# Local-only VCD 10.6 shaped read-only simulator; no real VMware/AD resources.
+# Local-only VCD 10.6 shaped simulator; synthetic writes never reach real VMware/AD.
 Set-StrictMode -Version Latest
 # Import the shared topology module without reloading it. A forced nested import
 # can remove the caller's exported commands during PowerShell 5.1 test runs.
 Import-Module (Join-Path $PSScriptRoot '..\..\Domain\Topology\TopologyPolicy.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'SimulatorWorkspace.psm1') -ErrorAction Stop
 
 function New-SimulatorResult {
     param([int]$StatusCode=200, $Body, [string]$ContentType='application/json; charset=utf-8')
@@ -25,7 +26,8 @@ function Invoke-SimulatorRoute {
           [Parameter(Mandatory)][string]$Method,
           [Parameter(Mandatory)][string]$Path,
           [hashtable]$Query = @{},
-          [string]$Authorization = '')
+          [string]$Authorization = '',
+          $RequestBody = $null)
     if ($Method -cnotin @('GET','POST')) { return New-SimulatorResult -StatusCode 405 -Body @{ error='Method not allowed' } }
     if ($Method -ceq 'GET' -and $Path -ceq '/api/versions') {
         return New-SimulatorResult -ContentType 'application/xml; charset=utf-8' -Body '<SupportedVersions><VersionInfo><Version>39.0</Version></VersionInfo></SupportedVersions>'
@@ -36,7 +38,23 @@ function Invoke-SimulatorRoute {
         if ($Authorization -cne $expected) { return New-SimulatorResult -StatusCode 401 -Body @{error='Synthetic simulator credentials only'} }
         return New-SimulatorResult -Body @{ id='urn:vcloud:session:simulator'; token='simulator-read-only' }
     }
-    if ($Method -cne 'GET') { return New-SimulatorResult -StatusCode 405 -Body @{error='Read-only simulator: mutation requests are rejected'} }
+    # Simulator-only POSTs are an entirely separate namespace from VCD API writes.
+    # A dedicated fake token is required for simulator writes. Never use live VCD credentials.
+    if ($Path -in @('/__simulator/v1/apply','/__simulator/v1/traffic') -and $Method -ceq 'POST') {
+        if ($Authorization -cne 'Bearer simulator-edit-only') { return New-SimulatorResult -StatusCode 403 -Body @{error='Synthetic edit token required'} }
+        if ($null -eq $RequestBody) { return New-SimulatorResult -StatusCode 400 -Body @{error='Missing request JSON'} }
+        try {
+            if ($Path -eq '/__simulator/v1/apply') {
+                return New-SimulatorResult -Body (Invoke-SimulatorApply -Dataset $Dataset -Request $RequestBody)
+            }
+            return New-SimulatorResult -Body (Invoke-SimulatorTraffic -Dataset $Dataset -Request $RequestBody)
+        }
+        catch {
+            $status = if ($_.Exception.Message -like '409:*') { 409 } elseif ($_.Exception.Message -like '403:*') { 403 } else { 422 }
+            return New-SimulatorResult -StatusCode $status -Body @{error=$_.Exception.Message}
+        }
+    }
+    if ($Method -cne 'GET') { return New-SimulatorResult -StatusCode 405 -Body @{error='VCD API mutations are never implemented by the simulator'} }
     if ($Path -ceq '/__simulator/v1/topology') {
         return New-SimulatorResult -Body @{synthetic=$true;domains=$Dataset.domains;managementGrants=$Dataset.managementGrants;gateways=@($Dataset.gateways | ForEach-Object { [pscustomobject]@{domain=$_.domain;tier=$_.tier;gatewayId=$_.gatewayId;networkId=$_.networkId;name=$_.name} }) }
     }
@@ -52,7 +70,21 @@ function Invoke-SimulatorRoute {
         }
         catch { return New-SimulatorResult -StatusCode 400 -Body @{error='Invalid access-check parameters'} }
     }
-    if ($Authorization -cne 'Bearer simulator-read-only') { return New-SimulatorResult -StatusCode 401 -Body @{error='Invalid synthetic bearer token'} }
+    if ($Authorization -cnotin @('Bearer simulator-read-only','Bearer simulator-edit-only')) { return New-SimulatorResult -StatusCode 401 -Body @{error='Invalid synthetic bearer token'} }
+    if ($Path -ceq '/__simulator/v1/scopes') {
+        return New-SimulatorResult -Body @{synthetic=$true;scopes=@($Dataset.gateways | ForEach-Object { [pscustomobject]@{domain=$_.domain;tier=$_.tier;gatewayId=$_.gatewayId;networkId=$_.networkId;name=$_.name} })}
+    }
+    if ($Path -ceq '/__simulator/v1/state') {
+        try { return New-SimulatorResult -Body (Get-SimulatorWorkspaceState -Dataset $Dataset -GatewayId ([string]$Query.gatewayId)) }
+        catch { return New-SimulatorResult -StatusCode 404 -Body @{error='Unknown synthetic gateway'} }
+    }
+    if ($Path -ceq '/__simulator/v1/traffic') {
+        try {
+            $null=Get-SimulatorWorkspaceState -Dataset $Dataset -GatewayId ([string]$Query.gatewayId)
+            return New-SimulatorResult -Body @{synthetic=$true;events=@($Dataset.simulatorWorkspace[[string]$Query.gatewayId].flows)}
+        }
+        catch { return New-SimulatorResult -StatusCode 404 -Body @{error='Unknown synthetic gateway'} }
+    }
     if ($Path -ceq '/cloudapi/1.0.0/sessions/current') {
         return New-SimulatorResult -Body @{id='urn:vcloud:session:simulator';user='simulator@local';org='simulator';synthetic=$true}
     }
@@ -99,8 +131,10 @@ function Invoke-SimulatorRoute {
 function Start-VcdSimulatorServer {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$TopologyPath,
-          [ValidateRange(1024,65535)][int]$Port=8765)
+          [ValidateRange(1024,65535)][int]$Port=8765,
+          [string]$PersistencePath='')
     $dataset = Import-SimulatorTopology -Path $TopologyPath
+    $null = Initialize-SimulatorWorkspace -Dataset $dataset -PersistencePath $PersistencePath
     $listener = [System.Net.HttpListener]::new()
     $listener.Prefixes.Add(('http://127.0.0.1:{0}/' -f $Port))
     try {
@@ -109,12 +143,13 @@ function Start-VcdSimulatorServer {
             throw "Could not start loopback simulator on port $Port ($($_.Exception.Message)). Check URL ACL and whether the port is already in use."
         }
         Write-Host ("Synthetic VCD 10.6 API simulator at http://127.0.0.1:{0}/" -f $Port) -ForegroundColor Cyan
-        Write-Host 'Read-only. No actual VMware or Active Directory connections. Press Ctrl+C to stop.'
+        Write-Host 'Local synthetic edits enabled only via /__simulator/v1/apply. No actual VMware/AD changes. Press Ctrl+C to stop.'
         while ($listener.IsListening) {
             $pending = $listener.BeginGetContext($null, $null)
             while (-not $pending.AsyncWaitHandle.WaitOne(250)) { }
             $context = $listener.EndGetContext($pending)
             try {
+                $result = $null
                 $remote = $context.Request.RemoteEndPoint.Address
                 if (-not [Net.IPAddress]::IsLoopback($remote)) {
                     $result = New-SimulatorResult -StatusCode 403 -Body @{error='Loopback clients only'}
@@ -122,7 +157,24 @@ function Start-VcdSimulatorServer {
                 else {
                     $query = @{}
                     foreach ($key in @($context.Request.QueryString.AllKeys)) { if ($null -ne $key) { $query[$key] = $context.Request.QueryString[$key] } }
-                    $result = Invoke-SimulatorRoute -Dataset $dataset -Method $context.Request.HttpMethod -Path $context.Request.Url.AbsolutePath -Query $query -Authorization ([string]$context.Request.Headers['Authorization'])
+                    $requestBody = $null
+                    if ($context.Request.HttpMethod -ceq 'POST' -and $context.Request.Url.AbsolutePath -in @('/__simulator/v1/apply','/__simulator/v1/traffic')) {
+                        if ($context.Request.ContentLength64 -lt 0 -or $context.Request.ContentLength64 -gt 1048576) {
+                            $result = New-SimulatorResult -StatusCode 413 -Body @{error='JSON request exceeds 1 MiB maximum'}
+                        }
+                        else {
+                            try {
+                                $reader = [IO.StreamReader]::new($context.Request.InputStream,[Text.Encoding]::UTF8)
+                                $bodyText = $reader.ReadToEnd()
+                                $reader.Dispose()
+                                $requestBody = ConvertFrom-Json -InputObject $bodyText -ErrorAction Stop
+                            }
+                            catch { $result = New-SimulatorResult -StatusCode 400 -Body @{error='Invalid JSON request'} }
+                        }
+                    }
+                    if ($null -eq $result) {
+                        $result = Invoke-SimulatorRoute -Dataset $dataset -Method $context.Request.HttpMethod -Path $context.Request.Url.AbsolutePath -Query $query -Authorization ([string]$context.Request.Headers['Authorization']) -RequestBody $requestBody
+                    }
                 }
                 $content = if ($result.Body -is [string]) { [string]$result.Body } else { ConvertTo-Json -InputObject $result.Body -Depth 40 -Compress }
                 $bytes = [Text.Encoding]::UTF8.GetBytes($content)

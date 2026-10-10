@@ -19,6 +19,23 @@ $files = @(Get-ChildItem -LiteralPath (Join-Path $ProjectRoot 'tests') -Recurse 
 foreach ($file in $files) {
     $script:CurrentTestFile = $file.Name
     Write-Host ("`n-- $($file.Name) --") -ForegroundColor Cyan
+
+    # Parse each test before executing it. Syntax errors should become normal
+    # NUnit failures instead of aborting the runner without an XML report.
+    $tokens = $null
+    $parseErrors = $null
+    $null = [System.Management.Automation.Language.Parser]::ParseFile(
+        $file.FullName, [ref]$tokens, [ref]$parseErrors
+    )
+    if (@($parseErrors).Count -gt 0) {
+        $details = (@($parseErrors) | ForEach-Object {
+            'Line {0}, column {1}: {2}' -f $_.Extent.StartLineNumber, $_.Extent.StartColumnNumber, $_.Message
+        }) -join '; '
+        Invoke-TestCase -Name 'Test file parses under PowerShell 5.1' -Body {
+            throw "Invalid syntax in $($file.Name): $details"
+        }
+        continue
+    }
     . $file.FullName
 }
 $results = @($script:TestResults.ToArray())

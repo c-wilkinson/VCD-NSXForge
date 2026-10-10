@@ -2,6 +2,7 @@ Set-StrictMode -Version Latest
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Import-Module (Join-Path $PSScriptRoot '..\Controllers\UiState.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'NetworkEditorForm.psm1') -ErrorAction Stop
 
 function New-NetworkManagerForm {
     [CmdletBinding()]
@@ -55,10 +56,15 @@ function New-NetworkManagerForm {
     $readVcdButton.Name = 'ReadVcdButton'
     $readVcdButton.Text = 'Read VCD snapshot'
     $readVcdButton.SetBounds(26, 166, 202, 37)
+    $editorButton=[System.Windows.Forms.Button]::new()
+    $editorButton.Name='OpenNetworkEditorButton'
+    $editorButton.Text='Network editor / traffic'
+    $editorButton.SetBounds(245,166,195,37)
+    $editorButton.Enabled=($Configuration.vcd.mode -ceq 'Simulator')
     $endpointLabel = [System.Windows.Forms.Label]::new()
     $endpointLabel.Name = 'VcdEndpointLabel'
     $endpointLabel.Text = if ($Configuration.vcd.apiUrl) { $(if ($Configuration.vcd.mode -eq 'Simulator') { 'SIMULATOR: ' } else { 'VCD API: ' }) + [string]$Configuration.vcd.apiUrl } else { 'VCD API: not configured (edit config/application.json)' }
-    $endpointLabel.SetBounds(245, 174, 568, 25)
+    $endpointLabel.SetBounds(456, 174, 356, 25)
     $endpointLabel.ForeColor = [System.Drawing.Color]::DimGray
     $endpointLabel.Anchor = 'Top, Left, Right'
 
@@ -103,12 +109,12 @@ function New-NetworkManagerForm {
     $events.BackColor = [System.Drawing.Color]::FromArgb(247, 248, 250)
 
     $footer = [System.Windows.Forms.Label]::new()
-    $footer.Text = 'Phase 3: read-only VCD snapshots; no infrastructure changes. Logs rotate at 5 MB and expire after 30 days.'
+    $footer.Text = 'Live VCD remains read-only. Editing and flow monitoring affect LOCAL SYNTHETIC simulator data only.'
     $footer.SetBounds(26, 585, 795, 23)
     $footer.ForeColor = [System.Drawing.Color]::DimGray
     $footer.Anchor = 'Left, Right, Bottom'
 
-    foreach ($control in @($heading,$subtitle,$run,$fail,$cancel,$planButton,$readVcdButton,$endpointLabel,$statusTitle,$status,$progress,$threadNote,$eventsHeading,$events,$footer)) {
+    foreach ($control in @($heading,$subtitle,$run,$fail,$cancel,$planButton,$readVcdButton,$editorButton,$endpointLabel,$statusTitle,$status,$progress,$threadNote,$eventsHeading,$events,$footer)) {
         [void]$form.Controls.Add($control)
     }
 
@@ -125,6 +131,7 @@ function New-NetworkManagerForm {
         StartState     = Get-Command -Name 'Set-UiOperationStarted' -ErrorAction Stop
         CancelState    = Get-Command -Name 'Set-UiCancellationRequested' -ErrorAction Stop
         UpdateState    = Get-Command -Name 'Update-UiOperationState' -ErrorAction Stop
+        EditorForm      = Get-Command -Name 'New-NetworkEditorForm' -ErrorAction Stop
     }
 
     $ui = New-UiOperationState
@@ -150,6 +157,7 @@ function New-NetworkManagerForm {
             $fail.Enabled = $false
             $planButton.Enabled = $false
             $readVcdButton.Enabled = $false
+            $editorButton.Enabled = $false
             $cancel.Enabled = $true
             $progress.Value = 0
             $status.Text = 'Operation queued on background runspace...'
@@ -205,6 +213,23 @@ function New-NetworkManagerForm {
         & $startOperation 'VcdRead' $vcdArguments
         $credential = $null
     }.GetNewClosure())
+    $editorButton.Add_Click({
+        if ($ui.ActiveOperationId -or $ui.Closing) { return }
+        $editor=$null
+        try {
+            $editor=& $commands.EditorForm -Configuration $Configuration -Logger $Logger
+            $null=$editor.Form.ShowDialog($form)
+        }
+        catch { & $logEvent ('EDITOR ERROR: '+$_.Exception.Message);$status.Text='Unable to open editor' }
+        finally {
+            if ($null -ne $editor) {
+                $editor.Timer.Stop();$editor.Timer.Dispose()
+                try { & $editor.CloseCommand -Dispatcher $editor.Dispatcher }
+                catch { & $logEvent ('Editor worker shutdown: '+$_.Exception.Message) }
+                $editor.Form.Dispose()
+            }
+        }
+    }.GetNewClosure())
     $cancel.Add_Click({
         if ($ui.ActiveOperationId) {
             & $commands.CancelWorker -Dispatcher $Dispatcher -OperationId $ui.ActiveOperationId
@@ -238,6 +263,7 @@ function New-NetworkManagerForm {
                 $fail.Enabled = -not $ui.Closing
                 $planButton.Enabled = -not $ui.Closing
                 $readVcdButton.Enabled = -not $ui.Closing
+                $editorButton.Enabled = ($Configuration.vcd.mode -ceq 'Simulator' -and -not $ui.Closing)
                 $cancel.Enabled = $false
             }
         }
@@ -261,6 +287,7 @@ function New-NetworkManagerForm {
             $fail.Enabled = $false
             $planButton.Enabled = $false
             $readVcdButton.Enabled = $false
+            $editorButton.Enabled = $false
             $cancel.Enabled = $false
             $status.Text = 'Closing: cancelling active operations...'
             & $commands.CancelWorker -Dispatcher $Dispatcher
