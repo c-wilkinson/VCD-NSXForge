@@ -7,80 +7,47 @@ if ($RunUiTests -and [Environment]::UserInteractive -and $PSVersionTable.PSEditi
     Import-Module (Join-Path $ProjectRoot 'src\Infrastructure\Logging\Logging.psm1') -Force
     Import-Module (Join-Path $ProjectRoot 'src\Runtime\Dispatcher.psm1') -Force
 
-    Invoke-TestCase -Name 'WinForms constructs and remains responsive during background processing' -Body {
+    Invoke-TestCase -Name 'Administrator dashboard provides real workflows, remains responsive and blocks live writes' -Body {
         $scratch = Join-Path ([IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString('n'))
         $logger = $null; $dispatcher = $null; $window = $null
         try {
             $logger = Start-AppLogger -ApplicationRoot $ProjectRoot -Directory $scratch -MaximumBytes 5000000 -RetentionDays 30
             $dispatcher = New-WorkerDispatcher -ApplicationRoot $ProjectRoot -Logger $logger -MaximumWorkers 2
             $cfg = Read-AppConfiguration -ApplicationRoot $ProjectRoot
-            # Smoke tests must not contact or prompt for a configured real VCD host.
-            $cfg.vcd.apiUrl = ''
-            $cfg.vcd.gatewayId = ''
-            $cfg.vcd.mode='Live'
+            # The CI test must never use a configured corporate endpoint.
+            $cfg.vcd.apiUrl = ''; $cfg.vcd.gatewayId = ''; $cfg.vcd.mode = 'Live'
             $window = New-NetworkManagerForm -Configuration $cfg -Dispatcher $dispatcher -Logger $logger
-            $editorButton=$window.Form.Controls.Find('OpenNetworkEditorButton',$true)[0]
-            Assert-True ($null -ne $editorButton) 'Missing simulator editor control'
-            Assert-True (-not $editorButton.Enabled) 'Simulator editor must be disabled in live mode'
-            $window.Form.Show()
-            [System.Windows.Forms.Application]::DoEvents()
-            $button = $window.Form.Controls.Find('RunDemoButton', $true)[0]
-            $status = $window.Form.Controls.Find('StatusLabel', $true)[0]
-            $ticks = $window.Form.Controls.Find('ThreadLabel', $true)[0]
-            $eventsBox = $window.Form.Controls.Find('EventsTextBox', $true)[0]
-            Assert-True ($null -ne $button)
-            Assert-True ($null -ne $eventsBox) 'EventsTextBox must be discoverable for diagnostics'
-            $button.PerformClick()
-            $before = $ticks.Text
-            $deadline = [DateTime]::UtcNow.AddSeconds(12)
-            while ([DateTime]::UtcNow -lt $deadline -and ((Get-RunningOperationCount -Dispatcher $dispatcher) -gt 0 -or $button.Enabled -eq $false)) {
-                [System.Windows.Forms.Application]::DoEvents()
-                [System.Threading.Thread]::Sleep(30)
+            $form = $window.Form
+            foreach ($name in @('DashboardLayout','DashboardTitle','ConnectionModeLabel','ConnectionSummaryPanel',
+                     'ConfiguredGatewayLabel','TestConnectionButton','ReadVcdButton','EventsTextBox',
+                     'StatusLabel','ProgressBar','CancelOperationButton','DashboardSafetyNotice')) {
+                Assert-Equal 1 (@($form.Controls.Find($name, $true)).Count) "Missing dashboard control $name"
             }
-            [System.Windows.Forms.Application]::DoEvents()
-            Assert-True ($status.Text -match '^Completed:') "Unexpected UI status: $($status.Text); events: $($eventsBox.Text); worker jobs: $(Get-RunningOperationCount -Dispatcher $dispatcher)"
-            Assert-True ($ticks.Text -ne $before) 'UI timer failed to tick during background execution'
-            Assert-True $button.Enabled 'Run button did not become enabled again'
-
-            $planButton = $window.Form.Controls.Find('PlanDemoButton', $true)[0]
-            Assert-True ($null -ne $planButton) 'Missing Phase 2 offline-plan button'
-            $planButton.PerformClick()
-            $deadline = [DateTime]::UtcNow.AddSeconds(10)
-            while ([DateTime]::UtcNow -lt $deadline -and -not $planButton.Enabled) {
-                [System.Windows.Forms.Application]::DoEvents()
-                [System.Threading.Thread]::Sleep(30)
+            $mode = $form.Controls.Find('ConnectionModeLabel', $true)[0]
+            Assert-True ($mode.Text -match 'READ ONLY') 'Live mode must be conspicuously read-only'
+            $simButtons = @('FirewallRulesButton','IpSetsButton','IpReservationsButton','TrafficMonitorButton','ChangePlansButton')
+            foreach ($name in $simButtons) {
+                $button = $form.Controls.Find($name, $true)[0]
+                Assert-True ($null -ne $button) "Missing $name"
+                Assert-True (-not $button.Enabled) "Live configuration must not enable $name"
             }
+            foreach ($oldName in @('RunDemoButton','FailureDemoButton','PlanDemoButton','ThreadLabel')) {
+                Assert-Equal 0 @($form.Controls.Find($oldName, $true)).Count "Demo control $oldName is still exposed"
+            }
+            $form.Show()
             [System.Windows.Forms.Application]::DoEvents()
-            Assert-True ($status.Text -match '^Completed:') "Offline plan UI failed: $($status.Text); events: $($eventsBox.Text)"
-            Assert-True ($eventsBox.Text -match 'PLAN: .*HTML=') 'Report path missing from UI event log'
-
-            $vcdButton = $window.Form.Controls.Find('ReadVcdButton', $true)[0]
-            Assert-True ($null -ne $vcdButton) 'Missing Phase 3 read-only VCD button'
-            $vcdButton.PerformClick()
-            Assert-True ($status.Text -match 'vcd.apiUrl') 'Unconfigured endpoint should not start HTTP or prompt for credentials'
+            $before = $window.UiState.Ticks
+            for ($i = 0; $i -lt 9; $i++) {
+                [System.Windows.Forms.Application]::DoEvents()
+                Start-Sleep -Milliseconds 30
+            }
+            Assert-True ($window.UiState.Ticks -gt $before) 'Dashboard UI timer stopped processing messages'
+            $status = $form.Controls.Find('StatusLabel', $true)[0]
+            $form.Controls.Find('TestConnectionButton',$true)[0].PerformClick()
+            Assert-True ($status.Text -match 'vcd.apiUrl') 'Unconfigured connection test must not request credentials or network access'
+            $form.Controls.Find('ReadVcdButton',$true)[0].PerformClick()
+            Assert-True ($status.Text -match 'vcd.apiUrl') 'Unconfigured snapshot must not request credentials or network access'
             Assert-Equal 0 (Get-RunningOperationCount -Dispatcher $dispatcher)
-
-            $failureButton = $window.Form.Controls.Find('FailureDemoButton', $true)[0]
-            $failureButton.PerformClick()
-            $deadline = [DateTime]::UtcNow.AddSeconds(5)
-            while ([DateTime]::UtcNow -lt $deadline -and -not $failureButton.Enabled) {
-                [System.Windows.Forms.Application]::DoEvents()
-                [System.Threading.Thread]::Sleep(30)
-            }
-            [System.Windows.Forms.Application]::DoEvents()
-            Assert-True ($status.Text -match '^Failed:') "UI failure path did not update status: $($status.Text); events: $($eventsBox.Text)"
-
-            $button.PerformClick()
-            [System.Windows.Forms.Application]::DoEvents()
-            $cancelButton = $window.Form.Controls.Find('CancelButton', $true)[0]
-            $cancelButton.PerformClick()
-            $deadline = [DateTime]::UtcNow.AddSeconds(6)
-            while ([DateTime]::UtcNow -lt $deadline -and -not $button.Enabled) {
-                [System.Windows.Forms.Application]::DoEvents()
-                [System.Threading.Thread]::Sleep(30)
-            }
-            [System.Windows.Forms.Application]::DoEvents()
-            Assert-True ($status.Text -match '^Cancelled:') "UI cancellation path did not update status: $($status.Text); events: $($eventsBox.Text)"
         }
         finally {
             if ($null -ne $window) { $window.Timer.Stop(); $window.Timer.Dispose(); $window.Form.Dispose() }
@@ -97,6 +64,117 @@ if ($RunUiTests -and [Environment]::UserInteractive -and $PSVersionTable.PSEditi
             }
             if ($null -ne $logger) { Stop-AppLogger -Logger $logger }
             if ([IO.Directory]::Exists($scratch)) { [IO.Directory]::Delete($scratch, $true) }
+        }
+    }
+
+    Invoke-TestCase -Name 'Dashboard Cancel enables only during work and cancels a real background runspace' -Body {
+        $scratch = Join-Path ([IO.Path]::GetTempPath()) ('vcd-dashboard-cancel-' + [guid]::NewGuid().ToString('n'))
+        $logger = $null; $dispatcher = $null; $window = $null
+        try {
+            $logger = Start-AppLogger -ApplicationRoot $ProjectRoot -Directory $scratch -MaximumBytes 5000000 -RetentionDays 30
+            $dispatcher = New-WorkerDispatcher -ApplicationRoot $ProjectRoot -Logger $logger -MaximumWorkers 1
+            $cfg = Read-AppConfiguration -ApplicationRoot $ProjectRoot
+            $cfg.vcd.mode = 'Simulator'; $cfg.vcd.apiUrl = 'http://127.0.0.1:8765'
+            $window = New-NetworkManagerForm -Configuration $cfg -Dispatcher $dispatcher -Logger $logger
+            $form = $window.Form
+            $form.Show()
+            [System.Windows.Forms.Application]::DoEvents()
+            $cancel = $form.Controls.Find('CancelOperationButton',$true)[0]
+            $connection = $form.Controls.Find('TestConnectionButton',$true)[0]
+            Assert-True (-not $cancel.Enabled) 'Cancel must be disabled with no operation'
+            Assert-True ($cancel.Text -match 'No active') 'Idle cancellation status should be clear'
+            $specs = @(
+                [pscustomobject]@{Name='FirewallRulesButton';Simulator=$true},
+                [pscustomobject]@{Name='IpSetsButton';Simulator=$true},
+                [pscustomobject]@{Name='IpReservationsButton';Simulator=$true},
+                [pscustomobject]@{Name='TrafficMonitorButton';Simulator=$true},
+                [pscustomobject]@{Name='ChangePlansButton';Simulator=$true},
+                [pscustomobject]@{Name='ReadVcdButton';Simulator=$false}
+            )
+            $nav = @{}
+            foreach ($spec in $specs) { $nav[$spec.Name] = $form.Controls.Find($spec.Name,$true)[0] }
+            $id = Start-BackgroundOperation -Dispatcher $dispatcher -Operation 'ProgressDemo'
+            $window.UiState.ActiveOperationId = $id
+            $window.UiState.Phase = 'Running'
+            Set-NetworkDashboardBusyState -Navigation $nav -ActionSpecs $specs -ConnectionTest $connection `
+                -CancelButton $cancel -Busy $true -Closing $false -IsSimulator $true
+            Assert-True ($cancel.Enabled -and $cancel.Visible) 'Cancel must be clickable while a job is running'
+            Assert-True (-not $connection.Enabled) 'New connection checks must be disabled during an operation'
+            $cancel.PerformClick()
+            Assert-Equal 'Cancelling' $window.UiState.Phase
+            Assert-True (-not $cancel.Enabled) 'Cancel button must disable after cancellation is requested'
+            $deadline = [DateTime]::UtcNow.AddSeconds(10)
+            while ($window.UiState.ActiveOperationId -and [DateTime]::UtcNow -lt $deadline) {
+                [System.Windows.Forms.Application]::DoEvents()
+                Start-Sleep -Milliseconds 35
+            }
+            Assert-Equal '' $window.UiState.ActiveOperationId 'Cancellation never reached UI terminal state'
+            Assert-Equal 'Cancelled' $window.UiState.Phase 'Dispatcher did not signal cancellation'
+            Assert-True (-not $cancel.Enabled) 'Cancel must be disabled after operation finishes'
+            Assert-True $connection.Enabled 'Connection check should be available again when idle'
+        }
+        finally {
+            if ($null -ne $window) { $window.Timer.Stop(); $window.Timer.Dispose(); $window.Form.Dispose() }
+            if ($null -ne $dispatcher) {
+                if ((Get-RunningOperationCount -Dispatcher $dispatcher) -gt 0) {
+                    Request-OperationCancellation -Dispatcher $dispatcher
+                    $deadline = [DateTime]::UtcNow.AddSeconds(6)
+                    while ((Get-RunningOperationCount -Dispatcher $dispatcher) -gt 0 -and [DateTime]::UtcNow -lt $deadline) {
+                        $null = @(Receive-DispatcherEvents -Dispatcher $dispatcher)
+                        Start-Sleep -Milliseconds 35
+                    }
+                }
+                if ((Get-RunningOperationCount -Dispatcher $dispatcher) -eq 0) { Close-WorkerDispatcher -Dispatcher $dispatcher }
+            }
+            if ($null -ne $logger) { Stop-AppLogger -Logger $logger }
+            if ([IO.Directory]::Exists($scratch)) { [IO.Directory]::Delete($scratch,$true) }
+        }
+    }
+
+    Invoke-TestCase -Name 'Simulator dashboard shortcuts are visible and navigate to correct editor tabs' -Body {
+        $scratch = Join-Path ([IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString('n'))
+        $logger = $null; $dispatcher = $null; $window = $null
+        try {
+            $logger = Start-AppLogger -ApplicationRoot $ProjectRoot -Directory $scratch -MaximumBytes 5000000 -RetentionDays 30
+            $dispatcher = New-WorkerDispatcher -ApplicationRoot $ProjectRoot -Logger $logger -MaximumWorkers 2
+            $cfg = Read-AppConfiguration -ApplicationRoot $ProjectRoot
+            $cfg.vcd.mode = 'Simulator'
+            $cfg.vcd.apiUrl = 'http://127.0.0.1:8765'
+            $window = New-NetworkManagerForm -Configuration $cfg -Dispatcher $dispatcher -Logger $logger
+            $window.Form.Show()
+            [System.Windows.Forms.Application]::DoEvents()
+            Assert-True ($window.Form.Controls.Find('ConnectionModeLabel',$true)[0].Text -eq 'LOCAL SIMULATOR')
+            foreach ($name in @('FirewallRulesButton','IpSetsButton','IpReservationsButton','TrafficMonitorButton','ChangePlansButton')) {
+                $button = $window.Form.Controls.Find($name,$true)[0]
+                Assert-True ($button.Enabled -and $button.Visible) "Shortcut not available: $name"
+                $point = $window.Form.PointToClient($button.PointToScreen([System.Drawing.Point]::Empty))
+                Assert-True ($point.X -ge 0 -and $point.Y -ge 0 -and ($point.X+$button.Width) -le $window.Form.ClientSize.Width -and ($point.Y+$button.Height) -le $window.Form.ClientSize.Height) "Shortcut clipped: $name"
+            }
+            $editor = $null
+            try {
+                Import-Module (Join-Path $ProjectRoot 'src\Presentation\WinForms\NetworkEditorForm.psm1') -ErrorAction Stop
+                foreach ($target in @(@('edgeFirewallRules','Firewall rules'),@('ipSets','IP Sets'),@('manualIpReservations','IP reservations'),@('plan','Change plan'),@('traffic','Synthetic traffic'))) {
+                    $editor = New-NetworkEditorForm -Configuration $cfg -Logger $logger -InitialTab $target[0]
+                    $tabControl = $editor.Form.Controls.Find('NetworkEditorTabs',$true)[0]
+                    Assert-Equal $target[1] $tabControl.SelectedTab.Text "Dashboard target $($target[0])"
+                    $editor.Timer.Stop(); $editor.Timer.Dispose()
+                    & $editor.CloseCommand -Dispatcher $editor.Dispatcher
+                    $editor.Form.Dispose(); $editor = $null
+                }
+            }
+            finally {
+                if ($null -ne $editor) {
+                    $editor.Timer.Stop(); $editor.Timer.Dispose()
+                    & $editor.CloseCommand -Dispatcher $editor.Dispatcher
+                    $editor.Form.Dispose()
+                }
+            }
+        }
+        finally {
+            if ($null -ne $window) { $window.Timer.Stop(); $window.Timer.Dispose(); $window.Form.Dispose() }
+            if ($null -ne $dispatcher) { Close-WorkerDispatcher -Dispatcher $dispatcher }
+            if ($null -ne $logger) { Stop-AppLogger -Logger $logger }
+            if ([IO.Directory]::Exists($scratch)) { [IO.Directory]::Delete($scratch,$true) }
         }
     }
 }
@@ -147,8 +225,6 @@ if ($RunUiTests -and [Environment]::UserInteractive -and $PSVersionTable.PSEditi
 if ($RunUiTests -and [Environment]::UserInteractive -and $PSVersionTable.PSEdition -eq 'Desktop' -and
     [System.Threading.Thread]::CurrentThread.GetApartmentState() -eq [System.Threading.ApartmentState]::STA) {
     Invoke-TestCase -Name 'Network engineer dialogs expose labelled firewall IP Set and reservation controls' -Body {
-        # Force-refresh the dialog module once per test run to avoid stale imports
-        # when rerunning tests in an existing Windows PowerShell session.
         Import-Module (Join-Path $ProjectRoot 'src\Presentation\WinForms\NetworkItemDialog.psm1') -Force -ErrorAction Stop
         Import-Module (Join-Path $ProjectRoot 'src\Domain\State\StateModel.psm1') -ErrorAction Stop
         $docs=[ordered]@{edgeFirewallRules=(New-EmptyNetworkDocument edgeFirewallRules);ipSets=(New-EmptyNetworkDocument ipSets);manualIpReservations=(New-EmptyNetworkDocument manualIpReservations)}
@@ -237,13 +313,7 @@ if ($RunUiTests -and [Environment]::UserInteractive -and $PSVersionTable.PSEditi
             $create.Form.Show()
             [System.Windows.Forms.Application]::DoEvents()
             $save=Get-RequiredDialogTestControl -Form $create.Form -Name 'SaveNetworkItemButton' -ResourceKind edgeFirewallRules
-            # The recursive Controls.Find lookup failed for the empty validation label
-            # on Windows PowerShell 5.1. The dialog exposes the exact control
-            # used by the Save handler, so assert on that instance directly.
-            $validation=$create.ValidationLabel
-            Assert-True ($validation -is [System.Windows.Forms.Label]) 'Create dialog did not expose its validation label'
-            Assert-Equal 'NetworkItemValidation' $validation.Name
-            Assert-True ([object]::ReferenceEquals($validation.Parent,$create.Footer)) 'Validation label is not attached to the visible footer'
+            $validation=Get-RequiredDialogTestControl -Form $create.Form -Name 'NetworkItemValidation' -ResourceKind edgeFirewallRules
             $save.PerformClick()
             [System.Windows.Forms.Application]::DoEvents()
             Assert-True ($null -eq $create.Result.Value) 'Invalid rule must not be accepted'
@@ -264,17 +334,17 @@ if ($RunUiTests -and [Environment]::UserInteractive -and $PSVersionTable.PSEditi
         try {
             $edit.Form.Show()
             [System.Windows.Forms.Application]::DoEvents()
-            # Check the live dialog layout BEFORE Save: successful Save closes
-            # the modeless form used by this test, which disposes its controls
-            # and can clear Parent references. Post-save tests inspect data.
-            $validation=$edit.ValidationLabel
-            Assert-True ($validation -is [System.Windows.Forms.Label]) 'Edit dialog did not expose its validation label'
-            Assert-Equal 'NetworkItemValidation' $validation.Name
-            Assert-True ([object]::ReferenceEquals($validation.Parent,$edit.Footer)) 'Edited rule validation label is not in the footer before Save'
+            # A successful Save closes the modeless test form. Check control
+            # ownership while the dialog is open, then assert returned data.
+            $editValidation=$edit.ValidationLabel
+            Assert-True ($editValidation -is [System.Windows.Forms.Label]) 'Edit dialog validation control is not a label'
+            Assert-Equal 'NetworkItemValidation' $editValidation.Name
+            Assert-True ([object]::ReferenceEquals($editValidation.Parent,$edit.Footer)) 'Edit validation label is not in its footer before Save'
             (Get-RequiredDialogTestControl -Form $edit.Form -Name 'NetworkItemName' -ResourceKind edgeFirewallRules).Text='Allow HTTPS (updated)'
             (Get-RequiredDialogTestControl -Form $edit.Form -Name 'SaveNetworkItemButton' -ResourceKind edgeFirewallRules).PerformClick()
             [System.Windows.Forms.Application]::DoEvents()
-            Assert-True ($null -ne $edit.Result.Value) "Edit Save did not return updated item. Validation: $($validation.Text)"
+            $editFailure=if ($null -eq $edit.Result.Value) { $editValidation.Text } else { '' }
+            Assert-True ($null -ne $edit.Result.Value) "Edit Save did not return updated item. Validation: $editFailure"
             Assert-Equal 'Allow HTTPS (updated)' $edit.Result.Value.name
             Assert-Equal 'allow-https' $edit.Result.Value.key
             Assert-Equal 'Allow HTTPS' $docs.edgeFirewallRules.items[0].name 'Editing must leave baseline unchanged until parent accepts result'

@@ -70,13 +70,15 @@ try {
             # This operation is read-only; observed import is enabled only for explicit CLI use.
             $result = Invoke-VcdReadOperation @parameters
             $CancellationToken.ThrowIfCancellationRequested()
+            Import-Module (Join-Path $ApplicationRoot 'src\Application\VcdRead\VcdReadSummary.psm1') -ErrorAction Stop
+            $summary = New-VcdReadCompletionSummary -Result $result -ConnectionOnly:([bool]$Arguments.ConnectionOnly)
             $EventQueue.Enqueue([pscustomobject]@{
                 Type = 'VcdSummary'; OperationId = $OperationId
-                Message = ('VCD connection OK; snapshot={0}; rules={1}; IP Sets={2}; reservations={3}' -f $result.SnapshotPath,$result.FirewallRuleCount,$result.IpSetCount,$result.ReservationCount)
+                Message = $summary.Message
                 Percent = 95; WorkerThreadId = [System.Threading.Thread]::CurrentThread.ManagedThreadId
             })
-            Write-AppLog -Logger $Logger -Component 'VcdRead' -Level 'INFO' -OperationId $OperationId -Message 'Read-only VCD snapshot completed' -Properties @{ snapshot = $result.SnapshotPath }
-            Send-WorkerProgress -Message 'Read-only VCD API snapshot complete' -Percent 100
+            Write-AppLog -Logger $Logger -Component 'VcdRead' -Level 'INFO' -OperationId $OperationId -Message $summary.LogMessage
+            Send-WorkerProgress -Message $summary.ProgressMessage -Percent 100
         }
         { $_ -in @('SimulatorScopes','SimulatorLoadState','SimulatorPlan','SimulatorApply','SimulatorTraffic','SimulatorSaveDraft') } {
             Import-Module (Join-Path $ApplicationRoot 'src\Application\Simulator\SimulatorClient.psm1') -ErrorAction Stop
@@ -138,6 +140,19 @@ try {
                 OperationId=$OperationId;Percent=95;WorkerThreadId=[Threading.Thread]::CurrentThread.ManagedThreadId
             })
             Send-WorkerProgress -Message $description -Percent 100
+        }
+        'SaveRuleTemplate' {
+            $CancellationToken.ThrowIfCancellationRequested()
+            Import-Module (Join-Path $ApplicationRoot 'src\Application\Editing\NetworkRuleTemplates.psm1') -ErrorAction Stop
+            Send-WorkerProgress -Message 'Saving reusable local firewall rule template' -Percent 35
+            $saved=Save-NetworkRuleTemplate -Path ([string]$Arguments.TemplatePath) -Rule $Arguments.Rule -Name ([string]$Arguments.TemplateName) -BuiltInPath ([string]$Arguments.BuiltInPath)
+            $CancellationToken.ThrowIfCancellationRequested()
+            $EventQueue.Enqueue([pscustomobject]@{
+                Type='SimulatorData';Name='TemplateSaved';Message=('Saved local template '+$saved.name)
+                Payload=[pscustomobject]@{Message=('Saved template '+$saved.name)}
+                OperationId=$OperationId;Percent=95;WorkerThreadId=[Threading.Thread]::CurrentThread.ManagedThreadId
+            })
+            Send-WorkerProgress -Message 'Local template saved; no live VCD changes' -Percent 100
         }
         'FailureDemo' {
             Send-WorkerProgress -Message 'Preparing simulated failure' -Percent 15

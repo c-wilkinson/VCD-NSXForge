@@ -1,0 +1,655 @@
+{
+  "schemaVersion": 1,
+  "synthetic": true,
+  "description": "Invented hosts and roles; informational only. Simulator reads topology.json, not this inventory file.",
+  "hosts": [
+    {
+      "hostname": "A-DC01",
+      "ipAddress": "10.50.10.10",
+      "domain": "DomainA",
+      "tier": 0,
+      "role": "Domain controller / DNS",
+      "description": "Forest root DC, DNS, GC, NTP",
+      "fictional": true
+    },
+    {
+      "hostname": "A-DC02",
+      "ipAddress": "10.50.10.11",
+      "domain": "DomainA",
+      "tier": 0,
+      "role": "Domain controller / DNS",
+      "description": "Redundant forest-root DC",
+      "fictional": true
+    },
+    {
+      "hostname": "A-CA01",
+      "ipAddress": "10.50.10.20",
+      "domain": "DomainA",
+      "tier": 0,
+      "role": "AD CS issuing CA",
+      "description": "Enterprise PKI issuing CA",
+      "fictional": true
+    },
+    {
+      "hostname": "A-OCSP01",
+      "ipAddress": "10.50.10.21",
+      "domain": "DomainA",
+      "tier": 0,
+      "role": "OCSP responder",
+      "description": "Certificate status and revocation",
+      "fictional": true
+    },
+    {
+      "hostname": "A-PAM01",
+      "ipAddress": "10.50.10.30",
+      "domain": "DomainA",
+      "tier": 0,
+      "role": "Privileged access management",
+      "description": "Privileged identity and vault",
+      "fictional": true
+    },
+    {
+      "hostname": "A-PAW01",
+      "ipAddress": "10.50.10.40",
+      "domain": "DomainA",
+      "tier": 0,
+      "role": "Privileged access workstation",
+      "description": "Tier 0 admin device",
+      "fictional": true
+    },
+    {
+      "hostname": "A-PAW02",
+      "ipAddress": "10.50.10.41",
+      "domain": "DomainA",
+      "tier": 0,
+      "role": "Privileged access workstation",
+      "description": "Redundant Tier 0 admin device",
+      "fictional": true
+    },
+    {
+      "hostname": "A-BASTION01",
+      "ipAddress": "10.50.10.45",
+      "domain": "DomainA",
+      "tier": 0,
+      "role": "Privileged jump host",
+      "description": "Tier 0 controlled bastion",
+      "fictional": true
+    },
+    {
+      "hostname": "A-NPS01",
+      "ipAddress": "10.50.10.50",
+      "domain": "DomainA",
+      "tier": 0,
+      "role": "RADIUS/NPS",
+      "description": "Network policy service",
+      "fictional": true
+    },
+    {
+      "hostname": "A-IDMON01",
+      "ipAddress": "10.50.10.60",
+      "domain": "DomainA",
+      "tier": 0,
+      "role": "Identity auditing",
+      "description": "Tier 0 identity monitoring",
+      "fictional": true
+    },
+    {
+      "hostname": "A-MON01",
+      "ipAddress": "10.50.20.10",
+      "domain": "DomainA",
+      "tier": 1,
+      "role": "Monitoring server",
+      "description": "Central metrics and dashboards",
+      "fictional": true
+    },
+    {
+      "hostname": "A-SYSLOG01",
+      "ipAddress": "10.50.20.11",
+      "domain": "DomainA",
+      "tier": 1,
+      "role": "Syslog/SIEM collector",
+      "description": "Centralised audit log collector",
+      "fictional": true
+    },
+    {
+      "hostname": "A-BACKUP01",
+      "ipAddress": "10.50.20.20",
+      "domain": "DomainA",
+      "tier": 1,
+      "role": "Backup orchestrator",
+      "description": "Backup jobs and catalogues",
+      "fictional": true
+    },
+    {
+      "hostname": "A-BACKUPREPO01",
+      "ipAddress": "10.50.20.21",
+      "domain": "DomainA",
+      "tier": 1,
+      "role": "Backup repository",
+      "description": "Backup restore point storage",
+      "fictional": true
+    },
+    {
+      "hostname": "A-TOOLS01",
+      "ipAddress": "10.50.20.30",
+      "domain": "DomainA",
+      "tier": 1,
+      "role": "Automation tools",
+      "description": "Shared infrastructure automation",
+      "fictional": true
+    },
+    {
+      "hostname": "A-WSUS01",
+      "ipAddress": "10.50.20.40",
+      "domain": "DomainA",
+      "tier": 1,
+      "role": "WSUS",
+      "description": "Operating system patch distribution",
+      "fictional": true
+    },
+    {
+      "hostname": "A-VCDADMIN01",
+      "ipAddress": "10.50.20.50",
+      "domain": "DomainA",
+      "tier": 1,
+      "role": "VCD administration jump box",
+      "description": "Dedicated VCD read-only operational tooling",
+      "fictional": true
+    },
+    {
+      "hostname": "A-PROXY01",
+      "ipAddress": "10.50.20.60",
+      "domain": "DomainA",
+      "tier": 1,
+      "role": "HTTPS proxy",
+      "description": "Controlled outbound HTTPS proxy",
+      "fictional": true
+    },
+    {
+      "hostname": "B-DC01",
+      "ipAddress": "10.51.10.10",
+      "domain": "DomainB",
+      "tier": 0,
+      "role": "Domain controller / DNS",
+      "description": "DomainB DC1, DNS and GC",
+      "fictional": true
+    },
+    {
+      "hostname": "B-DC02",
+      "ipAddress": "10.51.10.11",
+      "domain": "DomainB",
+      "tier": 0,
+      "role": "Domain controller / DNS",
+      "description": "DomainB DC2, DNS and GC",
+      "fictional": true
+    },
+    {
+      "hostname": "B-CA01",
+      "ipAddress": "10.51.10.20",
+      "domain": "DomainB",
+      "tier": 0,
+      "role": "Domain issuing CA",
+      "description": "DomainB subordinate CA",
+      "fictional": true
+    },
+    {
+      "hostname": "B-PAW01",
+      "ipAddress": "10.51.10.40",
+      "domain": "DomainB",
+      "tier": 0,
+      "role": "Privileged access workstation",
+      "description": "DomainB Tier 0 administration",
+      "fictional": true
+    },
+    {
+      "hostname": "B-IDMON01",
+      "ipAddress": "10.51.10.60",
+      "domain": "DomainB",
+      "tier": 0,
+      "role": "Identity monitoring",
+      "description": "DomainB domain security monitoring",
+      "fictional": true
+    },
+    {
+      "hostname": "B-SQL01",
+      "ipAddress": "10.51.20.21",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "SQL Server FCI node",
+      "description": "FCI Node 1",
+      "fictional": true
+    },
+    {
+      "hostname": "B-SQL02",
+      "ipAddress": "10.51.20.22",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "SQL Server FCI node",
+      "description": "FCI Node 2",
+      "fictional": true
+    },
+    {
+      "hostname": "B-SQLFCI",
+      "ipAddress": "10.51.20.20",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "SQL Server FCI virtual listener",
+      "description": "Shared SQL FCI virtual IP / clustered client name",
+      "fictional": true
+    },
+    {
+      "hostname": "B-SQLAG",
+      "ipAddress": "10.51.20.23",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "SQL Server availability-group listener",
+      "description": "Synthetic AG listener for reporting",
+      "fictional": true
+    },
+    {
+      "hostname": "B-FILE01",
+      "ipAddress": "10.51.20.30",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "File server / DFS",
+      "description": "Departmental SMB shares",
+      "fictional": true
+    },
+    {
+      "hostname": "B-FILE02",
+      "ipAddress": "10.51.20.31",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "File server / DFS",
+      "description": "Redundant DFS target",
+      "fictional": true
+    },
+    {
+      "hostname": "B-DFS",
+      "ipAddress": "10.51.20.32",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "DFS namespace",
+      "description": "Namespace alias / synthetic VIP",
+      "fictional": true
+    },
+    {
+      "hostname": "B-RDSCB01",
+      "ipAddress": "10.51.20.40",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "RDS connection broker",
+      "description": "Connection broker 1",
+      "fictional": true
+    },
+    {
+      "hostname": "B-RDSCB02",
+      "ipAddress": "10.51.20.41",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "RDS connection broker",
+      "description": "Connection broker 2",
+      "fictional": true
+    },
+    {
+      "hostname": "B-RDSGW01",
+      "ipAddress": "10.51.20.42",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "RDS gateway",
+      "description": "Gateway HTTPS ingress",
+      "fictional": true
+    },
+    {
+      "hostname": "B-RDSGW02",
+      "ipAddress": "10.51.20.43",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "RDS gateway",
+      "description": "Gateway HTTPS redundancy",
+      "fictional": true
+    },
+    {
+      "hostname": "B-RDSH01",
+      "ipAddress": "10.51.20.45",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "RDS session host",
+      "description": "Session host 1",
+      "fictional": true
+    },
+    {
+      "hostname": "B-RDSH02",
+      "ipAddress": "10.51.20.46",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "RDS session host",
+      "description": "Session host 2",
+      "fictional": true
+    },
+    {
+      "hostname": "B-RDSH03",
+      "ipAddress": "10.51.20.47",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "RDS session host",
+      "description": "Session host 3",
+      "fictional": true
+    },
+    {
+      "hostname": "B-MCM01",
+      "ipAddress": "10.51.20.50",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "Microsoft Configuration Manager",
+      "description": "MCM / ConfigMgr site and management point",
+      "fictional": true
+    },
+    {
+      "hostname": "B-MCMDP01",
+      "ipAddress": "10.51.20.51",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "Configuration Manager distribution point",
+      "description": "Software distribution",
+      "fictional": true
+    },
+    {
+      "hostname": "B-WSUS01",
+      "ipAddress": "10.51.20.52",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "WSUS / software update point",
+      "description": "MCM software update point",
+      "fictional": true
+    },
+    {
+      "hostname": "B-WEB01",
+      "ipAddress": "10.51.20.60",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "Web application server",
+      "description": "Frontend web node 1",
+      "fictional": true
+    },
+    {
+      "hostname": "B-WEB02",
+      "ipAddress": "10.51.20.61",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "Web application server",
+      "description": "Frontend web node 2",
+      "fictional": true
+    },
+    {
+      "hostname": "B-APP01",
+      "ipAddress": "10.51.20.62",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "Application server",
+      "description": "Middleware node 1",
+      "fictional": true
+    },
+    {
+      "hostname": "B-APP02",
+      "ipAddress": "10.51.20.63",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "Application server",
+      "description": "Middleware node 2",
+      "fictional": true
+    },
+    {
+      "hostname": "B-ADO01",
+      "ipAddress": "10.51.20.70",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "Azure DevOps Server",
+      "description": "Self-hosted Azure DevOps Server",
+      "fictional": true
+    },
+    {
+      "hostname": "B-ADO02",
+      "ipAddress": "10.51.20.71",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "Azure DevOps Server standby",
+      "description": "Secondary ADO application tier",
+      "fictional": true
+    },
+    {
+      "hostname": "B-AGENT01",
+      "ipAddress": "10.51.20.72",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "Azure DevOps build agent",
+      "description": "Windows build agent",
+      "fictional": true
+    },
+    {
+      "hostname": "B-AGENT02",
+      "ipAddress": "10.51.20.73",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "Azure DevOps build agent",
+      "description": "Windows deployment agent",
+      "fictional": true
+    },
+    {
+      "hostname": "B-ARTIFACT01",
+      "ipAddress": "10.51.20.74",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "Artifact storage",
+      "description": "Internal package/artifact repository",
+      "fictional": true
+    },
+    {
+      "hostname": "B-SCM01",
+      "ipAddress": "10.51.20.75",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "Source control management",
+      "description": "Git-based source control / repository mirror",
+      "fictional": true
+    },
+    {
+      "hostname": "B-BACKUP01",
+      "ipAddress": "10.51.20.90",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "Backup proxy",
+      "description": "DomainB application backups",
+      "fictional": true
+    },
+    {
+      "hostname": "B-CLIENT01",
+      "ipAddress": "10.51.20.110",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "Workstation / RDS client",
+      "description": "Synthetic business client",
+      "fictional": true
+    },
+    {
+      "hostname": "B-CLIENT02",
+      "ipAddress": "10.51.20.111",
+      "domain": "DomainB",
+      "tier": 1,
+      "role": "Workstation / RDS client",
+      "description": "Synthetic business client",
+      "fictional": true
+    },
+    {
+      "hostname": "C-DC01",
+      "ipAddress": "10.52.10.10",
+      "domain": "DomainC",
+      "tier": 0,
+      "role": "Domain controller / DNS",
+      "description": "DomainC DC1, DNS and GC",
+      "fictional": true
+    },
+    {
+      "hostname": "C-DC02",
+      "ipAddress": "10.52.10.11",
+      "domain": "DomainC",
+      "tier": 0,
+      "role": "Domain controller / DNS",
+      "description": "DomainC DC2, DNS and GC",
+      "fictional": true
+    },
+    {
+      "hostname": "C-CA01",
+      "ipAddress": "10.52.10.20",
+      "domain": "DomainC",
+      "tier": 0,
+      "role": "Domain issuing CA",
+      "description": "DomainC subordinate CA",
+      "fictional": true
+    },
+    {
+      "hostname": "C-PAW01",
+      "ipAddress": "10.52.10.40",
+      "domain": "DomainC",
+      "tier": 0,
+      "role": "Privileged access workstation",
+      "description": "DomainC Tier 0 admin device",
+      "fictional": true
+    },
+    {
+      "hostname": "C-IDMON01",
+      "ipAddress": "10.52.10.60",
+      "domain": "DomainC",
+      "tier": 0,
+      "role": "Identity monitoring",
+      "description": "DomainC security monitoring",
+      "fictional": true
+    },
+    {
+      "hostname": "C-SQLDR01",
+      "ipAddress": "10.52.20.21",
+      "domain": "DomainC",
+      "tier": 1,
+      "role": "SQL Server DR replica",
+      "description": "SQL availability-group replica (synthetic DR)",
+      "fictional": true
+    },
+    {
+      "hostname": "C-SQLDR02",
+      "ipAddress": "10.52.20.22",
+      "domain": "DomainC",
+      "tier": 1,
+      "role": "SQL Server DR replica",
+      "description": "Second replica node",
+      "fictional": true
+    },
+    {
+      "hostname": "C-SQLDRVIP",
+      "ipAddress": "10.52.20.20",
+      "domain": "DomainC",
+      "tier": 1,
+      "role": "DR SQL listener",
+      "description": "Synthetic DR listener / virtual IP",
+      "fictional": true
+    },
+    {
+      "hostname": "C-FILEDR01",
+      "ipAddress": "10.52.20.30",
+      "domain": "DomainC",
+      "tier": 1,
+      "role": "File server DR",
+      "description": "DR SMB shares / DFS target",
+      "fictional": true
+    },
+    {
+      "hostname": "C-FILEDR02",
+      "ipAddress": "10.52.20.31",
+      "domain": "DomainC",
+      "tier": 1,
+      "role": "File server DR",
+      "description": "Secondary DR file server",
+      "fictional": true
+    },
+    {
+      "hostname": "C-RDSDR01",
+      "ipAddress": "10.52.20.45",
+      "domain": "DomainC",
+      "tier": 1,
+      "role": "RDS DR session host",
+      "description": "Standby RDS session host",
+      "fictional": true
+    },
+    {
+      "hostname": "C-RDSDR02",
+      "ipAddress": "10.52.20.46",
+      "domain": "DomainC",
+      "tier": 1,
+      "role": "RDS DR session host",
+      "description": "Standby RDS session host",
+      "fictional": true
+    },
+    {
+      "hostname": "C-MCMDP01",
+      "ipAddress": "10.52.20.51",
+      "domain": "DomainC",
+      "tier": 1,
+      "role": "ConfigMgr distribution point",
+      "description": "DomainC software distribution point",
+      "fictional": true
+    },
+    {
+      "hostname": "C-WSUS01",
+      "ipAddress": "10.52.20.52",
+      "domain": "DomainC",
+      "tier": 1,
+      "role": "WSUS",
+      "description": "DomainC Windows update service",
+      "fictional": true
+    },
+    {
+      "hostname": "C-WEB01",
+      "ipAddress": "10.52.20.60",
+      "domain": "DomainC",
+      "tier": 1,
+      "role": "Disaster recovery web",
+      "description": "Standby web application server",
+      "fictional": true
+    },
+    {
+      "hostname": "C-APP01",
+      "ipAddress": "10.52.20.62",
+      "domain": "DomainC",
+      "tier": 1,
+      "role": "Disaster recovery application",
+      "description": "Standby application server",
+      "fictional": true
+    },
+    {
+      "hostname": "C-ADOAGENT01",
+      "ipAddress": "10.52.20.72",
+      "domain": "DomainC",
+      "tier": 1,
+      "role": "Azure DevOps deployment agent",
+      "description": "Synthetic cross-domain deployment agent",
+      "fictional": true
+    },
+    {
+      "hostname": "C-BACKUP01",
+      "ipAddress": "10.52.20.90",
+      "domain": "DomainC",
+      "tier": 1,
+      "role": "Backup proxy",
+      "description": "DomainC backup proxy",
+      "fictional": true
+    },
+    {
+      "hostname": "C-CLIENT01",
+      "ipAddress": "10.52.20.110",
+      "domain": "DomainC",
+      "tier": 1,
+      "role": "Workstation",
+      "description": "Synthetic DomainC client",
+      "fictional": true
+    }
+  ]
+}

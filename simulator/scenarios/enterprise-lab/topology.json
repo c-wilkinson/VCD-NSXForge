@@ -1,0 +1,3755 @@
+{
+  "schemaVersion": 1,
+  "synthetic": true,
+  "description": "FICTIONAL enterprise network lab, VCD 10.6/NSX-T-shaped. Six gateway scopes; trusts: B and C trust A; DomainA trusts none. Synthetic rule matching is gateway-local, not multi-hop NSX packet routing.",
+  "domains": [
+    {
+      "name": "DomainA",
+      "trustedIdentityDomains": [],
+      "tiers": [
+        {
+          "id": 0,
+          "purpose": "Identity and privileged management"
+        },
+        {
+          "id": 1,
+          "purpose": "Workloads and general infrastructure"
+        }
+      ]
+    },
+    {
+      "name": "DomainB",
+      "trustedIdentityDomains": [
+        "DomainA"
+      ],
+      "tiers": [
+        {
+          "id": 0,
+          "purpose": "Identity and privileged management"
+        },
+        {
+          "id": 1,
+          "purpose": "Workloads and general infrastructure"
+        }
+      ]
+    },
+    {
+      "name": "DomainC",
+      "trustedIdentityDomains": [
+        "DomainA"
+      ],
+      "tiers": [
+        {
+          "id": 0,
+          "purpose": "Identity and privileged management"
+        },
+        {
+          "id": 1,
+          "purpose": "Workloads and general infrastructure"
+        }
+      ]
+    }
+  ],
+  "managementGrants": [
+    {
+      "sourceDomain": "DomainA",
+      "sourceTier": 0,
+      "targetDomain": "DomainB",
+      "targetTier": 1,
+      "action": "Manage"
+    },
+    {
+      "sourceDomain": "DomainA",
+      "sourceTier": 0,
+      "targetDomain": "DomainC",
+      "targetTier": 1,
+      "action": "Manage"
+    }
+  ],
+  "gateways": [
+    {
+      "name": "DomainA-T0-Edge",
+      "domain": "DomainA",
+      "tier": 0,
+      "gatewayId": "urn:vcloud:gateway:36467490-b431-5121-960f-aa88fd2acb76",
+      "networkId": "urn:vcloud:network:514655d8-986d-5762-8189-f9a8c4d10158",
+      "firewall": {
+        "status": "REALIZED",
+        "systemRules": [],
+        "userDefinedRules": [
+          {
+            "id": "urn:vcloud:firewallRule:0886e387-185a-57d5-b9ac-cbf0ab2911c8",
+            "name": "Allow approved workloads to DomainA DNS",
+            "description": "SYNTHETIC: DNS resolution to forest root DCs",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:a5fcc579-db98-5efe-a662-f172d2cd7115"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:669f2668-689d-5132-959a-d6fab1e8687f"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "53"
+                ]
+              },
+              {
+                "protocol": "UDP",
+                "ports": [
+                  "53"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:5991284d-8eef-51db-8643-441a24dae936",
+            "name": "Allow Kerberos to forest identity",
+            "description": "SYNTHETIC: Kerberos authentication and password change",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:a5fcc579-db98-5efe-a662-f172d2cd7115"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:669f2668-689d-5132-959a-d6fab1e8687f"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "88",
+                  "464"
+                ]
+              },
+              {
+                "protocol": "UDP",
+                "ports": [
+                  "88",
+                  "464"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:e10bda5b-29a3-5833-b46c-b46ceccf659c",
+            "name": "Allow LDAP and GC from workloads",
+            "description": "SYNTHETIC: Directory lookup for member workloads",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:a5fcc579-db98-5efe-a662-f172d2cd7115"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:669f2668-689d-5132-959a-d6fab1e8687f"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "389",
+                  "636",
+                  "3268",
+                  "3269"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:27a32031-ecd3-5e01-bc5c-6df62a5d003b",
+            "name": "Allow SYSVOL from member workloads",
+            "description": "SYNTHETIC: Domain policy and SYSVOL file reads",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:a5fcc579-db98-5efe-a662-f172d2cd7115"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:669f2668-689d-5132-959a-d6fab1e8687f"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "445"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:9837da7f-9508-5434-bc0c-e0a6f84d2dcc",
+            "name": "Allow domain controller replication",
+            "description": "SYNTHETIC: DC-to-DC replication and RPC traffic",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:1fb5696a-2366-57d4-8f91-634c423564dc"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:669f2668-689d-5132-959a-d6fab1e8687f"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "135",
+                  "445",
+                  "389",
+                  "636",
+                  "3268",
+                  "3269",
+                  "49152-65535"
+                ]
+              },
+              {
+                "protocol": "UDP",
+                "ports": [
+                  "123",
+                  "389"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:63231dc9-8f98-5efc-8968-589ec0640937",
+            "name": "Allow NTP from infrastructure",
+            "description": "SYNTHETIC: Time synchronisation to DC hierarchy",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:a5fcc579-db98-5efe-a662-f172d2cd7115"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:669f2668-689d-5132-959a-d6fab1e8687f"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "UDP",
+                "ports": [
+                  "123"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:d7b515c6-39c5-5d7a-bc12-84b2dd2c3918",
+            "name": "Allow PKI certificate enrolment",
+            "description": "SYNTHETIC: CA/OCSP/CRL enrolment paths in synthetic lab",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:a5fcc579-db98-5efe-a662-f172d2cd7115"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:5fc5496b-7908-52a5-a261-3ec87b9540d4"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "80",
+                  "443",
+                  "135"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:c7204398-7dae-5772-90b0-69d65fdc686b",
+            "name": "Allow PAM to privileged jump host",
+            "description": "SYNTHETIC: Privileged administrative jump via audited PAM",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:091de947-bd5a-5e3d-9263-f30dfa01a0e0"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:5cc77ddc-694b-52f2-9f7a-c06700685f68"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "5986",
+                  "3389"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:effd0647-b12f-5c11-ab61-28ee381cd50b",
+            "name": "Allow privileged administration of identity",
+            "description": "SYNTHETIC: Managed Tier 0 administrative access",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:5cc77ddc-694b-52f2-9f7a-c06700685f68"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:669f2668-689d-5132-959a-d6fab1e8687f"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:5fc5496b-7908-52a5-a261-3ec87b9540d4"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:091de947-bd5a-5e3d-9263-f30dfa01a0e0"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:3002bfcd-103b-5714-95df-7e6ff3dc0d67"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "5986",
+                  "3389"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:1dd75323-2b79-5a27-8c02-1c0368d3ea93",
+            "name": "Allow identity event forwarding",
+            "description": "SYNTHETIC: Identity audit forwarding",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:669f2668-689d-5132-959a-d6fab1e8687f"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:5fc5496b-7908-52a5-a261-3ec87b9540d4"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:ae9b794a-ac05-57c7-9857-3a3dcf14ff38"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "5986"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:46be6e22-c799-5b37-b2ee-3bd305c89138",
+            "name": "Block RDS attempts to Tier 0 RDP",
+            "description": "SYNTHETIC: Explicit tier boundary guard; does not model all AD permission rules",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:e54e0a91-b70c-584b-8c9e-ba2ade39f1d1"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:669f2668-689d-5132-959a-d6fab1e8687f"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:5fc5496b-7908-52a5-a261-3ec87b9540d4"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:091de947-bd5a-5e3d-9263-f30dfa01a0e0"
+              }
+            ],
+            "actionValue": "DROP",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "3389",
+                  "5985",
+                  "5986"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:11feb5fc-5549-52e9-9dc8-40d38bcdec84",
+            "name": "Legacy WinRM HTTP retired",
+            "description": "SYNTHETIC: Disabled example of superseded insecure management exception",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:5cc77ddc-694b-52f2-9f7a-c06700685f68"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:669f2668-689d-5132-959a-d6fab1e8687f"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": false,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "5985"
+                ]
+              }
+            ]
+          }
+        ],
+        "defaultRules": []
+      },
+      "ipSets": [
+        {
+          "id": "urn:vcloud:firewallGroup:669f2668-689d-5132-959a-d6fab1e8687f",
+          "name": "Forest-root Domain Controllers",
+          "description": "SYNTHETIC A0 IP group: Forest-root Domain Controllers",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.10.10",
+            "10.50.10.11"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:5fc5496b-7908-52a5-a261-3ec87b9540d4",
+          "name": "Enterprise PKI",
+          "description": "SYNTHETIC A0 IP group: Enterprise PKI",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.10.20",
+            "10.50.10.21"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:5cc77ddc-694b-52f2-9f7a-c06700685f68",
+          "name": "Tier 0 privileged admin endpoints",
+          "description": "SYNTHETIC A0 IP group: Tier 0 privileged admin endpoints",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.10.40",
+            "10.50.10.41",
+            "10.50.10.45"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:091de947-bd5a-5e3d-9263-f30dfa01a0e0",
+          "name": "Privileged access management",
+          "description": "SYNTHETIC A0 IP group: Privileged access management",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.10.30"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:3002bfcd-103b-5714-95df-7e6ff3dc0d67",
+          "name": "Identity authentication service",
+          "description": "SYNTHETIC A0 IP group: Identity authentication service",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.10.50"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:ae9b794a-ac05-57c7-9857-3a3dcf14ff38",
+          "name": "Identity monitoring",
+          "description": "SYNTHETIC A0 IP group: Identity monitoring",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.10.60"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:a5fcc579-db98-5efe-a662-f172d2cd7115",
+          "name": "Tier 1 workload subnets",
+          "description": "SYNTHETIC A0 IP group: Tier 1 workload subnets",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.20.0/24",
+            "10.51.20.0/24",
+            "10.52.20.0/24"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:1fb5696a-2366-57d4-8f91-634c423564dc",
+          "name": "All domain controllers",
+          "description": "SYNTHETIC A0 IP group: All domain controllers",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.10.10",
+            "10.50.10.11",
+            "10.51.10.10",
+            "10.51.10.11",
+            "10.52.10.10",
+            "10.52.10.11"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:7774b60c-9d8b-5ddc-9483-8283331f1208",
+          "name": "DomainB DCs",
+          "description": "SYNTHETIC A0 IP group: DomainB DCs",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.10.10",
+            "10.51.10.11"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:a6a8787f-f961-5e00-a1ba-4b97e1927c30",
+          "name": "DomainC DCs",
+          "description": "SYNTHETIC A0 IP group: DomainC DCs",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.10.10",
+            "10.52.10.11"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:e54e0a91-b70c-584b-8c9e-ba2ade39f1d1",
+          "name": "Nonprivileged RDS endpoints",
+          "description": "SYNTHETIC A0 IP group: Nonprivileged RDS endpoints",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.45",
+            "10.51.20.46",
+            "10.51.20.47",
+            "10.52.20.45"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:4431c9e3-b251-5a7a-8533-9353fc6c82b8",
+          "name": "Backup infrastructure",
+          "description": "SYNTHETIC A0 IP group: Backup infrastructure",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.20.20"
+          ]
+        }
+      ],
+      "reservations": [
+        {
+          "id": "urn:vcloud:networkManualIpReservation:490bad54-cd42-58d1-a50b-4c38699079a1",
+          "name": "A-DC01",
+          "description": "SYNTHETIC: Domain controller / DNS \u2014 Forest root DC, DNS, GC, NTP",
+          "networkRef": {
+            "id": "urn:vcloud:network:514655d8-986d-5762-8189-f9a8c4d10158"
+          },
+          "ipAddresses": "10.50.10.10"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:79048010-3948-5bbc-9bef-ee133f1082ce",
+          "name": "A-DC02",
+          "description": "SYNTHETIC: Domain controller / DNS \u2014 Redundant forest-root DC",
+          "networkRef": {
+            "id": "urn:vcloud:network:514655d8-986d-5762-8189-f9a8c4d10158"
+          },
+          "ipAddresses": "10.50.10.11"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:46467fd9-8e10-5741-bfb3-4e4aca5ebe2c",
+          "name": "A-CA01",
+          "description": "SYNTHETIC: AD CS issuing CA \u2014 Enterprise PKI issuing CA",
+          "networkRef": {
+            "id": "urn:vcloud:network:514655d8-986d-5762-8189-f9a8c4d10158"
+          },
+          "ipAddresses": "10.50.10.20"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:d648d7af-c956-51cf-a605-988289cc7e91",
+          "name": "A-OCSP01",
+          "description": "SYNTHETIC: OCSP responder \u2014 Certificate status and revocation",
+          "networkRef": {
+            "id": "urn:vcloud:network:514655d8-986d-5762-8189-f9a8c4d10158"
+          },
+          "ipAddresses": "10.50.10.21"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:7695cb15-2ed9-55e3-b29f-26ddb24b0846",
+          "name": "A-PAM01",
+          "description": "SYNTHETIC: Privileged access management \u2014 Privileged identity and vault",
+          "networkRef": {
+            "id": "urn:vcloud:network:514655d8-986d-5762-8189-f9a8c4d10158"
+          },
+          "ipAddresses": "10.50.10.30"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:f9e714fc-4aa2-5c0e-93a1-10cdd64acfd1",
+          "name": "A-PAW01",
+          "description": "SYNTHETIC: Privileged access workstation \u2014 Tier 0 admin device",
+          "networkRef": {
+            "id": "urn:vcloud:network:514655d8-986d-5762-8189-f9a8c4d10158"
+          },
+          "ipAddresses": "10.50.10.40"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:06eb7063-53b5-57d3-9e7d-4c8d376a30af",
+          "name": "A-PAW02",
+          "description": "SYNTHETIC: Privileged access workstation \u2014 Redundant Tier 0 admin device",
+          "networkRef": {
+            "id": "urn:vcloud:network:514655d8-986d-5762-8189-f9a8c4d10158"
+          },
+          "ipAddresses": "10.50.10.41"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:6dd1aaa9-9a25-5a85-8881-0cb9a266464f",
+          "name": "A-BASTION01",
+          "description": "SYNTHETIC: Privileged jump host \u2014 Tier 0 controlled bastion",
+          "networkRef": {
+            "id": "urn:vcloud:network:514655d8-986d-5762-8189-f9a8c4d10158"
+          },
+          "ipAddresses": "10.50.10.45"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:4456979d-c809-5d87-87c0-f2718404f1eb",
+          "name": "A-NPS01",
+          "description": "SYNTHETIC: RADIUS/NPS \u2014 Network policy service",
+          "networkRef": {
+            "id": "urn:vcloud:network:514655d8-986d-5762-8189-f9a8c4d10158"
+          },
+          "ipAddresses": "10.50.10.50"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:11dccf32-3301-5ff5-abef-3316f1ff426e",
+          "name": "A-IDMON01",
+          "description": "SYNTHETIC: Identity auditing \u2014 Tier 0 identity monitoring",
+          "networkRef": {
+            "id": "urn:vcloud:network:514655d8-986d-5762-8189-f9a8c4d10158"
+          },
+          "ipAddresses": "10.50.10.60"
+        }
+      ]
+    },
+    {
+      "name": "DomainA-T1-Edge",
+      "domain": "DomainA",
+      "tier": 1,
+      "gatewayId": "urn:vcloud:gateway:2714910e-df73-5f47-9ce1-487adbb2d85a",
+      "networkId": "urn:vcloud:network:7e56eb2e-81f1-5556-b56a-631aaaedbe73",
+      "firewall": {
+        "status": "REALIZED",
+        "systemRules": [],
+        "userDefinedRules": [
+          {
+            "id": "urn:vcloud:firewallRule:62a450b2-1813-541e-ac4d-9b01bda9ca17",
+            "name": "Allow monitoring ingestion",
+            "description": "SYNTHETIC: Monitoring HTTPS and encrypted syslog",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:f92d07e4-f174-512f-a6d6-066cfec9cb45"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:72c8981e-68a0-57c4-becf-4049b13a96dd"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "443",
+                  "6514"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:ff914fff-9551-56d6-9d06-6cac4ea32e4d",
+            "name": "Allow remote backup proxy",
+            "description": "SYNTHETIC: Backup control plane (simplified vendor-agnostic)",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:62266d0a-4187-590b-b36b-cceff817d223"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:ca825cc7-181f-580a-bb90-8ff7145663ca"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "443",
+                  "6160"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:cb1f9fdd-db65-5013-8162-1b59b2b4496c",
+            "name": "Allow backup repository SMB",
+            "description": "SYNTHETIC: Internal backup repository access",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:ca825cc7-181f-580a-bb90-8ff7145663ca"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:ca825cc7-181f-580a-bb90-8ff7145663ca"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "445"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:a87525d5-6bbd-56c2-abdf-64c0848936b9",
+            "name": "Allow WSUS from workloads",
+            "description": "SYNTHETIC: Approved update channels",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:f92d07e4-f174-512f-a6d6-066cfec9cb45"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:4114971a-f390-58b7-ba07-f1a4f75bd170"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "8530",
+                  "8531"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:c8dcc9de-0c5a-53d2-9be7-a22c248d4625",
+            "name": "Allow admins to automation tools",
+            "description": "SYNTHETIC: Privileged administration only",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:61eafe55-176d-5890-90fc-42ece038b128"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:8b94f17d-f79e-5718-8c9e-e797adc25d85"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "5986",
+                  "443"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:8af30a1a-3e86-5a40-bde9-b8896d323533",
+            "name": "Allow operational tools outbound via proxy",
+            "description": "SYNTHETIC: Controlled proxy access",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:8b94f17d-f79e-5718-8c9e-e797adc25d85"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:48035d9f-2a65-53c0-8702-39279ec15aa8"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "3128"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:59208d8e-8f3f-5ed4-946d-8b488290e0d5",
+            "name": "Allow backup admin portal",
+            "description": "SYNTHETIC: Backup administration",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:61eafe55-176d-5890-90fc-42ece038b128"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:ca825cc7-181f-580a-bb90-8ff7145663ca"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "443"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:937fcf66-085b-544e-b019-4989cc70d43e",
+            "name": "Allow observability from DevOps",
+            "description": "SYNTHETIC: ADO platform metrics and audit logs",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:ed33421e-d88f-535b-8701-63ad33eef439"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:72c8981e-68a0-57c4-becf-4049b13a96dd"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "443",
+                  "6514"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:904e8273-eaf7-5b87-add8-ca0a139955c6",
+            "name": "Disabled legacy SMB to all clients",
+            "description": "SYNTHETIC: Intentionally disabled legacy exception",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:f92d07e4-f174-512f-a6d6-066cfec9cb45"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:ca825cc7-181f-580a-bb90-8ff7145663ca"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": false,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "445"
+                ]
+              }
+            ]
+          }
+        ],
+        "defaultRules": []
+      },
+      "ipSets": [
+        {
+          "id": "urn:vcloud:firewallGroup:72c8981e-68a0-57c4-becf-4049b13a96dd",
+          "name": "Observability & syslog",
+          "description": "SYNTHETIC A1 IP group: Observability & syslog",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.20.10",
+            "10.50.20.11"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:ca825cc7-181f-580a-bb90-8ff7145663ca",
+          "name": "Backup servers",
+          "description": "SYNTHETIC A1 IP group: Backup servers",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.20.20",
+            "10.50.20.21"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:8b94f17d-f79e-5718-8c9e-e797adc25d85",
+          "name": "Tools and VCD admins",
+          "description": "SYNTHETIC A1 IP group: Tools and VCD admins",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.20.30",
+            "10.50.20.50"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:4114971a-f390-58b7-ba07-f1a4f75bd170",
+          "name": "Windows updates",
+          "description": "SYNTHETIC A1 IP group: Windows updates",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.20.40"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:48035d9f-2a65-53c0-8702-39279ec15aa8",
+          "name": "HTTP proxy",
+          "description": "SYNTHETIC A1 IP group: HTTP proxy",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.20.60"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:61eafe55-176d-5890-90fc-42ece038b128",
+          "name": "DomainA privileged workstation",
+          "description": "SYNTHETIC A1 IP group: DomainA privileged workstation",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.10.40",
+            "10.50.10.41",
+            "10.50.10.45"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:f92d07e4-f174-512f-a6d6-066cfec9cb45",
+          "name": "DomainB & DomainC workload nets",
+          "description": "SYNTHETIC A1 IP group: DomainB & DomainC workload nets",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.0/24",
+            "10.52.20.0/24"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:62266d0a-4187-590b-b36b-cceff817d223",
+          "name": "Remote backup proxies",
+          "description": "SYNTHETIC A1 IP group: Remote backup proxies",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.90",
+            "10.52.20.90"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:e61a15f1-cc5d-562f-a98c-14de285729e7",
+          "name": "DomainA DCs",
+          "description": "SYNTHETIC A1 IP group: DomainA DCs",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.10.10",
+            "10.50.10.11"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:ed33421e-d88f-535b-8701-63ad33eef439",
+          "name": "Azure DevOps",
+          "description": "SYNTHETIC A1 IP group: Azure DevOps",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.70",
+            "10.51.20.71"
+          ]
+        }
+      ],
+      "reservations": [
+        {
+          "id": "urn:vcloud:networkManualIpReservation:bbd026f3-9c71-5244-a0e1-d8ad2aabd74c",
+          "name": "A-MON01",
+          "description": "SYNTHETIC: Monitoring server \u2014 Central metrics and dashboards",
+          "networkRef": {
+            "id": "urn:vcloud:network:7e56eb2e-81f1-5556-b56a-631aaaedbe73"
+          },
+          "ipAddresses": "10.50.20.10"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:c7a6dbfb-1cb8-53ac-b8c7-d0e535148885",
+          "name": "A-SYSLOG01",
+          "description": "SYNTHETIC: Syslog/SIEM collector \u2014 Centralised audit log collector",
+          "networkRef": {
+            "id": "urn:vcloud:network:7e56eb2e-81f1-5556-b56a-631aaaedbe73"
+          },
+          "ipAddresses": "10.50.20.11"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:491db5c4-fa1c-5bdf-a6c0-22de2d4ad086",
+          "name": "A-BACKUP01",
+          "description": "SYNTHETIC: Backup orchestrator \u2014 Backup jobs and catalogues",
+          "networkRef": {
+            "id": "urn:vcloud:network:7e56eb2e-81f1-5556-b56a-631aaaedbe73"
+          },
+          "ipAddresses": "10.50.20.20"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:54072d46-b7fc-50ba-8fe6-b7ded351bc19",
+          "name": "A-BACKUPREPO01",
+          "description": "SYNTHETIC: Backup repository \u2014 Backup restore point storage",
+          "networkRef": {
+            "id": "urn:vcloud:network:7e56eb2e-81f1-5556-b56a-631aaaedbe73"
+          },
+          "ipAddresses": "10.50.20.21"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:55738f63-1617-59c1-a1cc-fb103fce613b",
+          "name": "A-TOOLS01",
+          "description": "SYNTHETIC: Automation tools \u2014 Shared infrastructure automation",
+          "networkRef": {
+            "id": "urn:vcloud:network:7e56eb2e-81f1-5556-b56a-631aaaedbe73"
+          },
+          "ipAddresses": "10.50.20.30"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:b7afde93-e38d-56ef-9979-15407948be14",
+          "name": "A-WSUS01",
+          "description": "SYNTHETIC: WSUS \u2014 Operating system patch distribution",
+          "networkRef": {
+            "id": "urn:vcloud:network:7e56eb2e-81f1-5556-b56a-631aaaedbe73"
+          },
+          "ipAddresses": "10.50.20.40"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:aa02dbc8-ff59-56f0-b794-5b7d6ee4d792",
+          "name": "A-VCDADMIN01",
+          "description": "SYNTHETIC: VCD administration jump box \u2014 Dedicated VCD read-only operational tooling",
+          "networkRef": {
+            "id": "urn:vcloud:network:7e56eb2e-81f1-5556-b56a-631aaaedbe73"
+          },
+          "ipAddresses": "10.50.20.50"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:64bb8e29-bb82-5fd4-92f8-aa96685a3219",
+          "name": "A-PROXY01",
+          "description": "SYNTHETIC: HTTPS proxy \u2014 Controlled outbound HTTPS proxy",
+          "networkRef": {
+            "id": "urn:vcloud:network:7e56eb2e-81f1-5556-b56a-631aaaedbe73"
+          },
+          "ipAddresses": "10.50.20.60"
+        }
+      ]
+    },
+    {
+      "name": "DomainB-T0-Edge",
+      "domain": "DomainB",
+      "tier": 0,
+      "gatewayId": "urn:vcloud:gateway:dc77b0fa-7120-5d88-beaa-4185575d27b3",
+      "networkId": "urn:vcloud:network:a59be514-3f33-52b6-841f-49ef666af221",
+      "firewall": {
+        "status": "REALIZED",
+        "systemRules": [],
+        "userDefinedRules": [
+          {
+            "id": "urn:vcloud:firewallRule:e2861e8e-2946-5db5-b920-b20842e8bdfc",
+            "name": "Allow workloads DomainB DNS",
+            "description": "SYNTHETIC: DomainB DNS queries",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:06092e3a-0329-5c06-a5f8-9829e6ac703f"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:7cfc625c-9fa7-5eb4-a79b-da79980061be"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "53"
+                ]
+              },
+              {
+                "protocol": "UDP",
+                "ports": [
+                  "53"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:388b7da2-0110-54bd-95d5-3935e487d57d",
+            "name": "Allow workloads DomainB Kerberos",
+            "description": "SYNTHETIC: Authentication and password changes",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:06092e3a-0329-5c06-a5f8-9829e6ac703f"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:7cfc625c-9fa7-5eb4-a79b-da79980061be"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "88",
+                  "464"
+                ]
+              },
+              {
+                "protocol": "UDP",
+                "ports": [
+                  "88",
+                  "464"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:1a04b33b-1687-5693-8371-2b0e0a0092a2",
+            "name": "Allow DomainB LDAP and GC",
+            "description": "SYNTHETIC: LDAP/LDAPS/GC",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:06092e3a-0329-5c06-a5f8-9829e6ac703f"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:7cfc625c-9fa7-5eb4-a79b-da79980061be"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "389",
+                  "636",
+                  "3268",
+                  "3269"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:40eef13c-5ce4-597d-968e-6e12b6cb1a46",
+            "name": "Allow DomainB SYSVOL",
+            "description": "SYNTHETIC: Read-only policy consumption; SMB no tier admin rights",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:06092e3a-0329-5c06-a5f8-9829e6ac703f"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:7cfc625c-9fa7-5eb4-a79b-da79980061be"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "445"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:6591b882-fa1f-5fdb-ac54-ca02e65d8867",
+            "name": "Allow trusted forest authentication",
+            "description": "SYNTHETIC: Cross-domain authentication trust/DC RPC (illustrative)",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:487d150d-598f-5d86-8798-82cbfd076a3e"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:7cfc625c-9fa7-5eb4-a79b-da79980061be"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "53",
+                  "88",
+                  "135",
+                  "389",
+                  "445",
+                  "3268",
+                  "3269",
+                  "49152-65535"
+                ]
+              },
+              {
+                "protocol": "UDP",
+                "ports": [
+                  "53",
+                  "88",
+                  "123"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:c85a34de-7651-5a99-9672-8cfb85061740",
+            "name": "Allow DomainB Tier0 admin",
+            "description": "SYNTHETIC: DomainB privileged management",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:917db542-ad39-5ca3-bd63-8f592c623bc4"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:7cfc625c-9fa7-5eb4-a79b-da79980061be"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:b68483f0-94df-5616-88d9-d0f7bd51143c"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "5986",
+                  "3389"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:f7f0bc6b-aab5-58a6-898d-94610bfd0411",
+            "name": "Allow DomainB identity monitoring",
+            "description": "SYNTHETIC: Identity event ingestion",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:7cfc625c-9fa7-5eb4-a79b-da79980061be"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:b68483f0-94df-5616-88d9-d0f7bd51143c"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:398d9516-2a27-597c-89e5-12bbcaeaec63"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "5986"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:81917730-8fa8-5ae4-8283-509b61817e1d",
+            "name": "Block DomainA remote Tier0 management",
+            "description": "SYNTHETIC: Trust does not itself confer DomainB Tier0 administration",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:2b3b346b-4a14-5c20-9a17-a0fa1d2452a3"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:7cfc625c-9fa7-5eb4-a79b-da79980061be"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:b68483f0-94df-5616-88d9-d0f7bd51143c"
+              }
+            ],
+            "actionValue": "DROP",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "3389",
+                  "5986"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:97c57352-2c36-5f10-9cdd-60a84f23d75b",
+            "name": "Block Tier1 admin of domain controllers",
+            "description": "SYNTHETIC: Tier1 cannot administer Tier0 resources",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:06092e3a-0329-5c06-a5f8-9829e6ac703f"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:7cfc625c-9fa7-5eb4-a79b-da79980061be"
+              }
+            ],
+            "actionValue": "DROP",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "3389",
+                  "5985",
+                  "5986"
+                ]
+              }
+            ]
+          }
+        ],
+        "defaultRules": []
+      },
+      "ipSets": [
+        {
+          "id": "urn:vcloud:firewallGroup:7cfc625c-9fa7-5eb4-a79b-da79980061be",
+          "name": "DomainB Domain Controllers",
+          "description": "SYNTHETIC B0 IP group: DomainB Domain Controllers",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.10.10",
+            "10.51.10.11"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:487d150d-598f-5d86-8798-82cbfd076a3e",
+          "name": "Trusted DomainA DCs",
+          "description": "SYNTHETIC B0 IP group: Trusted DomainA DCs",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.10.10",
+            "10.50.10.11"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:917db542-ad39-5ca3-bd63-8f592c623bc4",
+          "name": "DomainB Tier 0 privileged admins",
+          "description": "SYNTHETIC B0 IP group: DomainB Tier 0 privileged admins",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.10.40"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:b68483f0-94df-5616-88d9-d0f7bd51143c",
+          "name": "DomainB CA",
+          "description": "SYNTHETIC B0 IP group: DomainB CA",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.10.20"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:06092e3a-0329-5c06-a5f8-9829e6ac703f",
+          "name": "DomainB Tier 1 workload net",
+          "description": "SYNTHETIC B0 IP group: DomainB Tier 1 workload net",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.0/24"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:398d9516-2a27-597c-89e5-12bbcaeaec63",
+          "name": "DomainB identity monitor",
+          "description": "SYNTHETIC B0 IP group: DomainB identity monitor",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.10.60"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:2b3b346b-4a14-5c20-9a17-a0fa1d2452a3",
+          "name": "DomainA Tier 0 operators",
+          "description": "SYNTHETIC B0 IP group: DomainA Tier 0 operators",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.10.40",
+            "10.50.10.45"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:e38e7c21-c9b7-5b59-a038-83846a0d4b2a",
+          "name": "DomainA DCs",
+          "description": "SYNTHETIC B0 IP group: DomainA DCs",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.10.10",
+            "10.50.10.11"
+          ]
+        }
+      ],
+      "reservations": [
+        {
+          "id": "urn:vcloud:networkManualIpReservation:9d0ac944-99ee-5e6c-a5ba-848a2d6b45a8",
+          "name": "B-DC01",
+          "description": "SYNTHETIC: Domain controller / DNS \u2014 DomainB DC1, DNS and GC",
+          "networkRef": {
+            "id": "urn:vcloud:network:a59be514-3f33-52b6-841f-49ef666af221"
+          },
+          "ipAddresses": "10.51.10.10"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:fc78f3c2-3e30-50aa-99eb-13af8c55105a",
+          "name": "B-DC02",
+          "description": "SYNTHETIC: Domain controller / DNS \u2014 DomainB DC2, DNS and GC",
+          "networkRef": {
+            "id": "urn:vcloud:network:a59be514-3f33-52b6-841f-49ef666af221"
+          },
+          "ipAddresses": "10.51.10.11"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:43554149-6da8-58df-9830-fcdbc59b2e19",
+          "name": "B-CA01",
+          "description": "SYNTHETIC: Domain issuing CA \u2014 DomainB subordinate CA",
+          "networkRef": {
+            "id": "urn:vcloud:network:a59be514-3f33-52b6-841f-49ef666af221"
+          },
+          "ipAddresses": "10.51.10.20"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:af301983-36ac-50d1-b18a-c11b15f8abe6",
+          "name": "B-PAW01",
+          "description": "SYNTHETIC: Privileged access workstation \u2014 DomainB Tier 0 administration",
+          "networkRef": {
+            "id": "urn:vcloud:network:a59be514-3f33-52b6-841f-49ef666af221"
+          },
+          "ipAddresses": "10.51.10.40"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:addf907f-304a-5dbb-89b7-e7fab1fea1d8",
+          "name": "B-IDMON01",
+          "description": "SYNTHETIC: Identity monitoring \u2014 DomainB domain security monitoring",
+          "networkRef": {
+            "id": "urn:vcloud:network:a59be514-3f33-52b6-841f-49ef666af221"
+          },
+          "ipAddresses": "10.51.10.60"
+        }
+      ]
+    },
+    {
+      "name": "DomainB-T1-Edge",
+      "domain": "DomainB",
+      "tier": 1,
+      "gatewayId": "urn:vcloud:gateway:addb1d02-7ea5-516b-a14b-a664b1c168c6",
+      "networkId": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+      "firewall": {
+        "status": "REALIZED",
+        "systemRules": [],
+        "userDefinedRules": [
+          {
+            "id": "urn:vcloud:firewallRule:84077951-2ea2-571c-a5f5-5eaf6339e3f3",
+            "name": "Allow web HTTPS to app middleware",
+            "description": "SYNTHETIC: Web tier to application tier",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:d2d118fe-ecb3-5958-9e64-7cfee5c3b14d"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c2faaeb3-2f9f-5c1a-a79f-26602b912914"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "443"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:8902f8cc-8a23-51c2-826c-5c94f06e1888",
+            "name": "Allow application to SQL FCI",
+            "description": "SYNTHETIC: Application SQL client connectivity",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c2faaeb3-2f9f-5c1a-a79f-26602b912914"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c4513159-bb5c-5c59-a8a3-c896ab9e91b6"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "1433"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:b841e649-8e04-532d-86b9-2dc8dbcd4712",
+            "name": "Allow reporting web to SQL AG listener",
+            "description": "SYNTHETIC: Read-only reporting example",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:d2d118fe-ecb3-5958-9e64-7cfee5c3b14d"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c4513159-bb5c-5c59-a8a3-c896ab9e91b6"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "1433"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:43edd9fe-1bdd-5a4d-8909-67c167814e31",
+            "name": "Allow SQL FCI cluster heartbeat",
+            "description": "SYNTHETIC: WSFC and Windows RPC (simplified)",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:0d1c023e-d3bf-5ab8-99a3-2ca84131da34"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:0d1c023e-d3bf-5ab8-99a3-2ca84131da34"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "3343",
+                  "135",
+                  "445",
+                  "49152-65535"
+                ]
+              },
+              {
+                "protocol": "UDP",
+                "ports": [
+                  "3343"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:76860af7-db70-5ef8-8e8d-834464a84ffc",
+            "name": "Allow SQL Always On HADR transport",
+            "description": "SYNTHETIC: DomainC DR replicas to DomainB primary SQL",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:318a3cec-39b9-514a-a750-0e622f9ce100"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:0d1c023e-d3bf-5ab8-99a3-2ca84131da34"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "5022"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:8d42f4ce-497e-57f4-8fed-d02b253dfd5c",
+            "name": "Allow ADO application to SQL",
+            "description": "SYNTHETIC: Azure DevOps database connectivity",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:cf8cc11c-d0a0-5800-9edf-d65bebe28e04"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c4513159-bb5c-5c59-a8a3-c896ab9e91b6"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "1433"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:aa79f651-77bd-5cd7-a90a-ff92659d9625",
+            "name": "Allow user HTTPS to RDS gateway",
+            "description": "SYNTHETIC: RDS published access",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:11a5b856-5f71-597a-bc82-8f308ecde885"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "443"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:755599fb-cbe7-5dcf-84ae-7ed3bbe09a64",
+            "name": "Allow RDS gateway to session hosts",
+            "description": "SYNTHETIC: RDS Gateway session transport",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:11a5b856-5f71-597a-bc82-8f308ecde885"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:2a6fff94-3996-5b7f-bafc-ccee5008dcdc"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "3389"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:9499dd44-52e6-5abc-b35d-d268c17c262a",
+            "name": "Allow RDS broker to session hosts",
+            "description": "SYNTHETIC: Session brokering / session management",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:7ab6e7ba-8160-5df1-a0d5-4ce425e13092"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:2a6fff94-3996-5b7f-bafc-ccee5008dcdc"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "3389",
+                  "445"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:69fac6b0-dfcd-56d8-ae93-df349c007dd3",
+            "name": "Allow RDS sessions to departmental files",
+            "description": "SYNTHETIC: SMB file access",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:2a6fff94-3996-5b7f-bafc-ccee5008dcdc"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:1632ea2c-d3bf-5b23-af08-f89e6df27702"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "445"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:825a8108-9fda-5412-8dbe-47575698c371",
+            "name": "Allow clients to DFS shares",
+            "description": "SYNTHETIC: Windows file shares via DFS targets",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:1632ea2c-d3bf-5b23-af08-f89e6df27702"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "445"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:31556fee-b973-5e6a-a0ee-297e66afe738",
+            "name": "Allow MCM distribution to clients",
+            "description": "SYNTHETIC: ConfigMgr content download",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:efdc17b7-4055-5c35-81a4-2a12e028eed3"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "80",
+                  "443"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:9ade4354-eced-5002-88c3-174d368f01f5",
+            "name": "Allow MCM site to endpoints",
+            "description": "SYNTHETIC: ConfigMgr client push (illustrative RPC range)",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:ed9c7d84-81b3-5827-994c-3005ad6ce5d6"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:2a6fff94-3996-5b7f-bafc-ccee5008dcdc"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:d2d118fe-ecb3-5958-9e64-7cfee5c3b14d"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:c2faaeb3-2f9f-5c1a-a79f-26602b912914"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "445",
+                  "135",
+                  "49152-65535"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:5c76ab00-a0be-5a9a-84d3-62b36cc52c2c",
+            "name": "Allow WSUS content",
+            "description": "SYNTHETIC: Software updates via SUP",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:2a6fff94-3996-5b7f-bafc-ccee5008dcdc"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:cc2d7c47-2364-5f7b-89fa-a44732712c1e"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "8530",
+                  "8531"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:35fc027c-8375-53c2-9099-b5e542438464",
+            "name": "Allow build agents to ADO",
+            "description": "SYNTHETIC: ADO agent registration and job polling",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:8cbd86b3-8037-5078-9e24-6495ac6bc58a"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:cf8cc11c-d0a0-5800-9edf-d65bebe28e04"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "443"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:e99136a6-5ae8-5dbc-8298-57ab2bc4690b",
+            "name": "Allow DomainC deployment agent to ADO",
+            "description": "SYNTHETIC: Cross-domain pipeline polling; network path not AD trust",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:ea15cb31-4b90-56a4-aa29-2f82b817f6cd"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:cf8cc11c-d0a0-5800-9edf-d65bebe28e04"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "443"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:41f4e50f-c27c-5dd4-8f58-72bb2710fa88",
+            "name": "Allow build agents to SCM and artifacts",
+            "description": "SYNTHETIC: Git via SSH/HTTPS and artifacts over TLS",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:8cbd86b3-8037-5078-9e24-6495ac6bc58a"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:6c1df797-d3f2-53be-9e87-693c1937abb4"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "22",
+                  "443"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:f9b57102-8144-5228-a14f-3072542fecd9",
+            "name": "Allow internal clients to ADO",
+            "description": "SYNTHETIC: Internal ADO web UI and git HTTPS",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:2a6fff94-3996-5b7f-bafc-ccee5008dcdc"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:cf8cc11c-d0a0-5800-9edf-d65bebe28e04"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "443"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:16f1f29f-c35f-5dc6-a39b-343f25d1177a",
+            "name": "Allow DomainA admins to manage Tier1",
+            "description": "SYNTHETIC: Delegated management using Tier0 identity (simulated)",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c5faf811-e24b-587c-985e-143e0ad620dd"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:cf8cc11c-d0a0-5800-9edf-d65bebe28e04"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:ed9c7d84-81b3-5827-994c-3005ad6ce5d6"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:0d1c023e-d3bf-5ab8-99a3-2ca84131da34"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:1632ea2c-d3bf-5b23-af08-f89e6df27702"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:7ab6e7ba-8160-5df1-a0d5-4ce425e13092"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "5986"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:d3b66c8f-70c3-5fde-9a6f-9854703bdd13",
+            "name": "Allow backup proxy to SQL and files",
+            "description": "SYNTHETIC: Backup and recovery workflows (simplified)",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:df5fc2c6-63fd-5fc7-87f8-fd79cc98e152"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:0d1c023e-d3bf-5ab8-99a3-2ca84131da34"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:1632ea2c-d3bf-5b23-af08-f89e6df27702"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "445",
+                  "443"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:8130bda8-e496-56c0-b2ce-d351b3f2190f",
+            "name": "Allow application logs to central monitor",
+            "description": "SYNTHETIC: Telemetry to central monitoring scope",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:d2d118fe-ecb3-5958-9e64-7cfee5c3b14d"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:c2faaeb3-2f9f-5c1a-a79f-26602b912914"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:cf8cc11c-d0a0-5800-9edf-d65bebe28e04"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:e1a779da-1594-5896-b95c-b8b470695d47"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "443",
+                  "6514"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:36db0a0d-58ef-53ad-ba23-b3959ae14712",
+            "name": "Block untrusted clients direct SQL",
+            "description": "SYNTHETIC: Clients should use application tier, not direct database connectivity",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c4513159-bb5c-5c59-a8a3-c896ab9e91b6"
+              }
+            ],
+            "actionValue": "DROP",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "1433"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:68052363-6981-5504-8918-1baafbabf406",
+            "name": "Disabled legacy direct SQL client",
+            "description": "SYNTHETIC: Disabled prior exception retained for change review",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c4513159-bb5c-5c59-a8a3-c896ab9e91b6"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": false,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "1433"
+                ]
+              }
+            ]
+          }
+        ],
+        "defaultRules": []
+      },
+      "ipSets": [
+        {
+          "id": "urn:vcloud:firewallGroup:d2d118fe-ecb3-5958-9e64-7cfee5c3b14d",
+          "name": "Web frontend servers",
+          "description": "SYNTHETIC B1 IP group: Web frontend servers",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.60",
+            "10.51.20.61"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:c2faaeb3-2f9f-5c1a-a79f-26602b912914",
+          "name": "Application middleware",
+          "description": "SYNTHETIC B1 IP group: Application middleware",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.62",
+            "10.51.20.63"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:0d1c023e-d3bf-5ab8-99a3-2ca84131da34",
+          "name": "SQL FCI nodes",
+          "description": "SYNTHETIC B1 IP group: SQL FCI nodes",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.21",
+            "10.51.20.22"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:c4513159-bb5c-5c59-a8a3-c896ab9e91b6",
+          "name": "SQL FCI / AG listeners",
+          "description": "SYNTHETIC B1 IP group: SQL FCI / AG listeners",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.20",
+            "10.51.20.23"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:318a3cec-39b9-514a-a750-0e622f9ce100",
+          "name": "DomainC SQL DR replicas",
+          "description": "SYNTHETIC B1 IP group: DomainC SQL DR replicas",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.20.21",
+            "10.52.20.22"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:1632ea2c-d3bf-5b23-af08-f89e6df27702",
+          "name": "File servers & DFS",
+          "description": "SYNTHETIC B1 IP group: File servers & DFS",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.30",
+            "10.51.20.31",
+            "10.51.20.32"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:7ab6e7ba-8160-5df1-a0d5-4ce425e13092",
+          "name": "RDS brokers",
+          "description": "SYNTHETIC B1 IP group: RDS brokers",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.40",
+            "10.51.20.41"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:11a5b856-5f71-597a-bc82-8f308ecde885",
+          "name": "RDS gateways",
+          "description": "SYNTHETIC B1 IP group: RDS gateways",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.42",
+            "10.51.20.43"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:2a6fff94-3996-5b7f-bafc-ccee5008dcdc",
+          "name": "RDS session hosts",
+          "description": "SYNTHETIC B1 IP group: RDS session hosts",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.45",
+            "10.51.20.46",
+            "10.51.20.47"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:ed9c7d84-81b3-5827-994c-3005ad6ce5d6",
+          "name": "MCM site server",
+          "description": "SYNTHETIC B1 IP group: MCM site server",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.50"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:efdc17b7-4055-5c35-81a4-2a12e028eed3",
+          "name": "MCM distribution",
+          "description": "SYNTHETIC B1 IP group: MCM distribution",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.51"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:cc2d7c47-2364-5f7b-89fa-a44732712c1e",
+          "name": "Software update point",
+          "description": "SYNTHETIC B1 IP group: Software update point",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.52"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:cf8cc11c-d0a0-5800-9edf-d65bebe28e04",
+          "name": "Azure DevOps application tier",
+          "description": "SYNTHETIC B1 IP group: Azure DevOps application tier",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.70",
+            "10.51.20.71"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:8cbd86b3-8037-5078-9e24-6495ac6bc58a",
+          "name": "Azure DevOps build and deploy agents",
+          "description": "SYNTHETIC B1 IP group: Azure DevOps build and deploy agents",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.72",
+            "10.51.20.73"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:6c1df797-d3f2-53be-9e87-693c1937abb4",
+          "name": "Artifact and source control servers",
+          "description": "SYNTHETIC B1 IP group: Artifact and source control servers",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.74",
+            "10.51.20.75"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:df5fc2c6-63fd-5fc7-87f8-fd79cc98e152",
+          "name": "Backup proxy",
+          "description": "SYNTHETIC B1 IP group: Backup proxy",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.90"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20",
+          "name": "Business clients",
+          "description": "SYNTHETIC B1 IP group: Business clients",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.110",
+            "10.51.20.111"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:c206061b-6a14-5851-836e-156671d3c7e2",
+          "name": "DomainB and trusted DomainA DCs",
+          "description": "SYNTHETIC B1 IP group: DomainB and trusted DomainA DCs",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.10.10",
+            "10.51.10.11",
+            "10.50.10.10",
+            "10.50.10.11"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:c5faf811-e24b-587c-985e-143e0ad620dd",
+          "name": "DomainA privileged management endpoints",
+          "description": "SYNTHETIC B1 IP group: DomainA privileged management endpoints",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.10.40",
+            "10.50.10.45"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:ea15cb31-4b90-56a4-aa29-2f82b817f6cd",
+          "name": "DomainC Azure DevOps agent",
+          "description": "SYNTHETIC B1 IP group: DomainC Azure DevOps agent",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.20.72"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:e1a779da-1594-5896-b95c-b8b470695d47",
+          "name": "Central monitoring & syslog",
+          "description": "SYNTHETIC B1 IP group: Central monitoring & syslog",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.20.10",
+            "10.50.20.11"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:8ace5b8a-a318-558a-88bb-6a28f74d0ac0",
+          "name": "DomainC DR subnets",
+          "description": "SYNTHETIC B1 IP group: DomainC DR subnets",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.20.0/24"
+          ]
+        }
+      ],
+      "reservations": [
+        {
+          "id": "urn:vcloud:networkManualIpReservation:b61ec8ce-35da-5285-b4cb-0dc166e9c2ec",
+          "name": "B-SQL01",
+          "description": "SYNTHETIC: SQL Server FCI node \u2014 FCI Node 1",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.21"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:ed085188-eb4a-5736-a065-a3320b9e9c94",
+          "name": "B-SQL02",
+          "description": "SYNTHETIC: SQL Server FCI node \u2014 FCI Node 2",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.22"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:b73edb37-d8ff-5f4c-bc07-9ce7d3f16334",
+          "name": "B-SQLFCI",
+          "description": "SYNTHETIC: SQL Server FCI virtual listener \u2014 Shared SQL FCI virtual IP / clustered client name",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.20"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:8d62ad2d-f098-52f2-aca2-854a2207836f",
+          "name": "B-SQLAG",
+          "description": "SYNTHETIC: SQL Server availability-group listener \u2014 Synthetic AG listener for reporting",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.23"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:cceaab12-e73f-5ec5-b26a-905a92c4e13a",
+          "name": "B-FILE01",
+          "description": "SYNTHETIC: File server / DFS \u2014 Departmental SMB shares",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.30"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:431b180d-4cf5-5863-bcc7-41b5632aa942",
+          "name": "B-FILE02",
+          "description": "SYNTHETIC: File server / DFS \u2014 Redundant DFS target",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.31"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:f8fcec44-9f29-54fd-a814-6a0ab69bf625",
+          "name": "B-DFS",
+          "description": "SYNTHETIC: DFS namespace \u2014 Namespace alias / synthetic VIP",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.32"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:74a3cb2f-83bc-5cd9-950f-12a50453d067",
+          "name": "B-RDSCB01",
+          "description": "SYNTHETIC: RDS connection broker \u2014 Connection broker 1",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.40"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:c5e6ec6f-ce6e-5e95-9eb4-60c58c5cdbdc",
+          "name": "B-RDSCB02",
+          "description": "SYNTHETIC: RDS connection broker \u2014 Connection broker 2",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.41"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:ea9ccc8c-4916-51b9-88f5-04333a9aa2b2",
+          "name": "B-RDSGW01",
+          "description": "SYNTHETIC: RDS gateway \u2014 Gateway HTTPS ingress",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.42"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:487270b1-117a-5423-9842-41b6a863027b",
+          "name": "B-RDSGW02",
+          "description": "SYNTHETIC: RDS gateway \u2014 Gateway HTTPS redundancy",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.43"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:8886729c-b61f-581b-9b27-e7a35ee479e6",
+          "name": "B-RDSH01",
+          "description": "SYNTHETIC: RDS session host \u2014 Session host 1",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.45"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:f8c77e93-0ba3-546c-be0d-068dbcff4f9c",
+          "name": "B-RDSH02",
+          "description": "SYNTHETIC: RDS session host \u2014 Session host 2",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.46"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:847768bf-1b0e-587d-816e-7fdd5d5ce153",
+          "name": "B-RDSH03",
+          "description": "SYNTHETIC: RDS session host \u2014 Session host 3",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.47"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:286bc602-1f0c-539d-a6c6-5bdf7e143648",
+          "name": "B-MCM01",
+          "description": "SYNTHETIC: Microsoft Configuration Manager \u2014 MCM / ConfigMgr site and management point",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.50"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:e620c929-73f3-5787-849c-885b76e0f62b",
+          "name": "B-MCMDP01",
+          "description": "SYNTHETIC: Configuration Manager distribution point \u2014 Software distribution",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.51"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:8f31d1bb-e6b9-5df9-b72c-2ba056c50628",
+          "name": "B-WSUS01",
+          "description": "SYNTHETIC: WSUS / software update point \u2014 MCM software update point",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.52"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:24f9531e-539a-5ba3-8b0d-a1c42282fcfc",
+          "name": "B-WEB01",
+          "description": "SYNTHETIC: Web application server \u2014 Frontend web node 1",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.60"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:a404c24b-c8aa-5e4f-89c7-50370ed0739c",
+          "name": "B-WEB02",
+          "description": "SYNTHETIC: Web application server \u2014 Frontend web node 2",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.61"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:cc7092ff-1453-5fb1-8b1b-13cb412ff7e0",
+          "name": "B-APP01",
+          "description": "SYNTHETIC: Application server \u2014 Middleware node 1",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.62"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:3afdff7c-a9ab-5fd0-b685-0baa103ccb06",
+          "name": "B-APP02",
+          "description": "SYNTHETIC: Application server \u2014 Middleware node 2",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.63"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:410b6666-2fc5-5488-90f9-3ae421d7358d",
+          "name": "B-ADO01",
+          "description": "SYNTHETIC: Azure DevOps Server \u2014 Self-hosted Azure DevOps Server",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.70"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:34f31bba-412b-5d69-b962-a508903f0d6e",
+          "name": "B-ADO02",
+          "description": "SYNTHETIC: Azure DevOps Server standby \u2014 Secondary ADO application tier",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.71"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:1f38cc3a-9be4-5a56-b549-9fc0ccee0476",
+          "name": "B-AGENT01",
+          "description": "SYNTHETIC: Azure DevOps build agent \u2014 Windows build agent",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.72"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:0a05718a-b3da-530d-9504-f04da7f5c04e",
+          "name": "B-AGENT02",
+          "description": "SYNTHETIC: Azure DevOps build agent \u2014 Windows deployment agent",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.73"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:36fbd576-9266-57f1-98e3-aca96444f25b",
+          "name": "B-ARTIFACT01",
+          "description": "SYNTHETIC: Artifact storage \u2014 Internal package/artifact repository",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.74"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:4aae02e6-76c1-563f-81e3-99ced3386c36",
+          "name": "B-SCM01",
+          "description": "SYNTHETIC: Source control management \u2014 Git-based source control / repository mirror",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.75"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:d30f2298-8a87-5382-ac7c-22fa76ecaef9",
+          "name": "B-BACKUP01",
+          "description": "SYNTHETIC: Backup proxy \u2014 DomainB application backups",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.90"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:1610421b-2b5f-5a19-b887-82c5c978f0c1",
+          "name": "B-CLIENT01",
+          "description": "SYNTHETIC: Workstation / RDS client \u2014 Synthetic business client",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.110"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:a1f35aea-f8fc-5ee6-b3f4-de8ad0cfd6cd",
+          "name": "B-CLIENT02",
+          "description": "SYNTHETIC: Workstation / RDS client \u2014 Synthetic business client",
+          "networkRef": {
+            "id": "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc"
+          },
+          "ipAddresses": "10.51.20.111"
+        }
+      ]
+    },
+    {
+      "name": "DomainC-T0-Edge",
+      "domain": "DomainC",
+      "tier": 0,
+      "gatewayId": "urn:vcloud:gateway:e552549b-6b45-5435-b37a-5e2ef1a10f42",
+      "networkId": "urn:vcloud:network:4201c987-ccdc-59b1-8afe-607bd96b539d",
+      "firewall": {
+        "status": "REALIZED",
+        "systemRules": [],
+        "userDefinedRules": [
+          {
+            "id": "urn:vcloud:firewallRule:e370eba2-5ade-5d21-b563-200d4146e917",
+            "name": "Allow DomainC DNS",
+            "description": "SYNTHETIC: DomainC DNS queries",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:7ab291b1-d63e-5c39-9749-1f5131154d6e"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:113fe2df-abd8-5595-8600-ee972b96c29e"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "53"
+                ]
+              },
+              {
+                "protocol": "UDP",
+                "ports": [
+                  "53"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:a4b87a0d-7a7a-5ad6-a66c-1deaf81d5c14",
+            "name": "Allow DomainC Kerberos",
+            "description": "SYNTHETIC: DomainC authentication",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:7ab291b1-d63e-5c39-9749-1f5131154d6e"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:113fe2df-abd8-5595-8600-ee972b96c29e"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "88",
+                  "464"
+                ]
+              },
+              {
+                "protocol": "UDP",
+                "ports": [
+                  "88",
+                  "464"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:d395a711-2c28-5248-b4de-37731da57387",
+            "name": "Allow DomainC LDAP/GC",
+            "description": "SYNTHETIC: LDAP and GC queries",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:7ab291b1-d63e-5c39-9749-1f5131154d6e"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:113fe2df-abd8-5595-8600-ee972b96c29e"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "389",
+                  "636",
+                  "3268",
+                  "3269"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:dbcb1ddb-dbb5-5166-be29-8f5779367b76",
+            "name": "Allow DomainC SYSVOL",
+            "description": "SYNTHETIC: Group Policy reads",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:7ab291b1-d63e-5c39-9749-1f5131154d6e"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:113fe2df-abd8-5595-8600-ee972b96c29e"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "445"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:829a1da8-3f16-546d-9b64-5b16e5f58242",
+            "name": "Allow trusted DomainA DC replication",
+            "description": "SYNTHETIC: Trusted forest/DC RPC communication illustration",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:d75d8038-3cf4-578c-8686-833807f11e5d"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:113fe2df-abd8-5595-8600-ee972b96c29e"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "135",
+                  "389",
+                  "445",
+                  "49152-65535"
+                ]
+              },
+              {
+                "protocol": "UDP",
+                "ports": [
+                  "53",
+                  "88",
+                  "123"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:10aec650-5adc-51a2-bc37-a71bfb659fcf",
+            "name": "Allow DomainC Tier0 admins",
+            "description": "SYNTHETIC: DomainC Tier0 privileged access",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:1efac79c-700d-5b36-a92c-0b16643e9f18"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:113fe2df-abd8-5595-8600-ee972b96c29e"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:100e5263-0208-5078-9d7d-ff9ca1cbcc57"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "5986",
+                  "3389"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:7270add7-2abd-52e4-af9d-dcd66f2906c1",
+            "name": "Allow DomainC identity security events",
+            "description": "SYNTHETIC: DomainC identity telemetry",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:113fe2df-abd8-5595-8600-ee972b96c29e"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:100e5263-0208-5078-9d7d-ff9ca1cbcc57"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:1a75e110-8fd4-577c-aa06-5b485e8a2844"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "5986"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:3dafe867-1f22-5b76-8be6-2b75676bc71f",
+            "name": "Block Tier1 admin of Tier0",
+            "description": "SYNTHETIC: Tier1 forbidden for Tier0 management",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:7ab291b1-d63e-5c39-9749-1f5131154d6e"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:113fe2df-abd8-5595-8600-ee972b96c29e"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:100e5263-0208-5078-9d7d-ff9ca1cbcc57"
+              }
+            ],
+            "actionValue": "DROP",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "3389",
+                  "5985",
+                  "5986"
+                ]
+              }
+            ]
+          }
+        ],
+        "defaultRules": []
+      },
+      "ipSets": [
+        {
+          "id": "urn:vcloud:firewallGroup:113fe2df-abd8-5595-8600-ee972b96c29e",
+          "name": "DomainC Domain Controllers",
+          "description": "SYNTHETIC C0 IP group: DomainC Domain Controllers",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.10.10",
+            "10.52.10.11"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:d75d8038-3cf4-578c-8686-833807f11e5d",
+          "name": "Trusted DomainA DCs",
+          "description": "SYNTHETIC C0 IP group: Trusted DomainA DCs",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.10.10",
+            "10.50.10.11"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:1efac79c-700d-5b36-a92c-0b16643e9f18",
+          "name": "DomainC Tier 0 admin",
+          "description": "SYNTHETIC C0 IP group: DomainC Tier 0 admin",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.10.40"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:100e5263-0208-5078-9d7d-ff9ca1cbcc57",
+          "name": "DomainC CA",
+          "description": "SYNTHETIC C0 IP group: DomainC CA",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.10.20"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:7ab291b1-d63e-5c39-9749-1f5131154d6e",
+          "name": "DomainC Tier 1 workload net",
+          "description": "SYNTHETIC C0 IP group: DomainC Tier 1 workload net",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.20.0/24"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:1a75e110-8fd4-577c-aa06-5b485e8a2844",
+          "name": "DomainC identity monitor",
+          "description": "SYNTHETIC C0 IP group: DomainC identity monitor",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.10.60"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:7ab91677-f473-5f3d-ba9d-48095b801344",
+          "name": "DomainA DCs",
+          "description": "SYNTHETIC C0 IP group: DomainA DCs",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.10.10",
+            "10.50.10.11"
+          ]
+        }
+      ],
+      "reservations": [
+        {
+          "id": "urn:vcloud:networkManualIpReservation:ebb393c3-c58c-592b-bc14-e7babdb1ecb5",
+          "name": "C-DC01",
+          "description": "SYNTHETIC: Domain controller / DNS \u2014 DomainC DC1, DNS and GC",
+          "networkRef": {
+            "id": "urn:vcloud:network:4201c987-ccdc-59b1-8afe-607bd96b539d"
+          },
+          "ipAddresses": "10.52.10.10"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:173917d2-632b-508c-9059-d8d75cf6bd63",
+          "name": "C-DC02",
+          "description": "SYNTHETIC: Domain controller / DNS \u2014 DomainC DC2, DNS and GC",
+          "networkRef": {
+            "id": "urn:vcloud:network:4201c987-ccdc-59b1-8afe-607bd96b539d"
+          },
+          "ipAddresses": "10.52.10.11"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:c2c1d976-bd0d-5f73-9f92-b995e5083d67",
+          "name": "C-CA01",
+          "description": "SYNTHETIC: Domain issuing CA \u2014 DomainC subordinate CA",
+          "networkRef": {
+            "id": "urn:vcloud:network:4201c987-ccdc-59b1-8afe-607bd96b539d"
+          },
+          "ipAddresses": "10.52.10.20"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:b61b799b-f397-584f-b517-9baf4be500aa",
+          "name": "C-PAW01",
+          "description": "SYNTHETIC: Privileged access workstation \u2014 DomainC Tier 0 admin device",
+          "networkRef": {
+            "id": "urn:vcloud:network:4201c987-ccdc-59b1-8afe-607bd96b539d"
+          },
+          "ipAddresses": "10.52.10.40"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:40382a0b-7b7a-5c94-980e-cad7f1baa99c",
+          "name": "C-IDMON01",
+          "description": "SYNTHETIC: Identity monitoring \u2014 DomainC security monitoring",
+          "networkRef": {
+            "id": "urn:vcloud:network:4201c987-ccdc-59b1-8afe-607bd96b539d"
+          },
+          "ipAddresses": "10.52.10.60"
+        }
+      ]
+    },
+    {
+      "name": "DomainC-T1-Edge",
+      "domain": "DomainC",
+      "tier": 1,
+      "gatewayId": "urn:vcloud:gateway:a7be6e37-afbc-5382-9038-839ae54c16ae",
+      "networkId": "urn:vcloud:network:02f7f342-5349-5a15-8c6d-1b3dfae003c3",
+      "firewall": {
+        "status": "REALIZED",
+        "systemRules": [],
+        "userDefinedRules": [
+          {
+            "id": "urn:vcloud:firewallRule:26ade21f-7fd2-5853-b332-cf1c9ca87466",
+            "name": "Allow DomainC apps to SQL DR listener",
+            "description": "SYNTHETIC: Failover application connectivity",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c620960d-1b86-5035-b2d2-499baeb25c83"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:16b789c5-c92a-5ed0-9dad-ea1e288300ed"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "1433"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:194a8a21-e8f6-51fd-b218-dc8aa6463db1",
+            "name": "Allow DomainB SQL HADR to DR",
+            "description": "SYNTHETIC: SQL availability group data transport",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:183a1c86-2b46-57fb-9540-df16e5ef7b33"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:82c5c491-ece8-5c39-89eb-2f83af5b855e"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "5022"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:ac27bd7d-a719-513b-b8d9-fdeb8e180e5d",
+            "name": "Allow SQL DR cluster replication",
+            "description": "SYNTHETIC: DR SQL WSFC internode traffic",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:82c5c491-ece8-5c39-89eb-2f83af5b855e"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:82c5c491-ece8-5c39-89eb-2f83af5b855e"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "3343",
+                  "135",
+                  "445",
+                  "49152-65535"
+                ]
+              },
+              {
+                "protocol": "UDP",
+                "ports": [
+                  "3343"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:fdce5bb5-2a3a-5850-8e23-615e0e376bdf",
+            "name": "Allow DomainC client to DR file shares",
+            "description": "SYNTHETIC: File shares in DR",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:d0f8d1fe-9549-5b60-903e-ea99e101e1bf"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:5348ef1a-2b73-5e46-8f3f-8abd43a6db0c"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:cd732eb0-7346-5f1d-9dcd-242a821b3b73"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "445"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:85c79a5a-0c23-54f8-b31b-8bddaffe4da2",
+            "name": "Allow primary RDS gateway to DR RDS hosts",
+            "description": "SYNTHETIC: RDS gateway DR redirection",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:5d612dfb-8e0e-5874-a972-e8560f725906"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:5348ef1a-2b73-5e46-8f3f-8abd43a6db0c"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "3389"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:3d4f69d1-d35b-52f9-bdea-4e9771cb03ae",
+            "name": "Allow clients to DR MCM DP",
+            "description": "SYNTHETIC: DomainC content distribution",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:d0f8d1fe-9549-5b60-903e-ea99e101e1bf"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:28e8d1e0-bab1-5994-bca9-34be85b77a9c"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "80",
+                  "443"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:95c03767-ab05-57ad-a4fe-aaeb590deafa",
+            "name": "Allow clients to DomainC WSUS",
+            "description": "SYNTHETIC: Software updates",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:d0f8d1fe-9549-5b60-903e-ea99e101e1bf"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:5348ef1a-2b73-5e46-8f3f-8abd43a6db0c"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:37d8ff3c-ed42-545e-a3ac-cebc58f84dd8"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "8530",
+                  "8531"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:8c2f4c7b-9b24-5a7a-bb1b-38cb63278754",
+            "name": "Allow DR web to app",
+            "description": "SYNTHETIC: Standby web-to-app",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:4d602a3c-1291-5eff-80ac-0270fa9e2cbf"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:c620960d-1b86-5035-b2d2-499baeb25c83"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "443"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:fb62f088-1583-5462-86f2-bb56d5784872",
+            "name": "Allow DR agent to DomainB ADO",
+            "description": "SYNTHETIC: Cross-domain deployment polling (outbound view)",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:92a1bc41-83a3-564d-9df8-6b2ed24637a0"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:bf02aeb2-bcfe-55ad-8133-12fb2dffab59"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "443"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:0b6c4c7c-c27e-57a4-80ef-dc234f87abcc",
+            "name": "Allow DomainA admin to DR workloads",
+            "description": "SYNTHETIC: Delegated Tier0 to Tier1 administration",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:b317f358-5b56-5a1a-9718-f850cc7c4648"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:82c5c491-ece8-5c39-89eb-2f83af5b855e"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:cd732eb0-7346-5f1d-9dcd-242a821b3b73"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:4d602a3c-1291-5eff-80ac-0270fa9e2cbf"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:c620960d-1b86-5035-b2d2-499baeb25c83"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "5986"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:69de8bd3-dda2-5438-8972-57f830d5e45a",
+            "name": "Allow backup agent to DR file and SQL",
+            "description": "SYNTHETIC: DR backup proxy access",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:ac6d8b83-f2ad-57e9-874f-c6daa81bb765"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:82c5c491-ece8-5c39-89eb-2f83af5b855e"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:cd732eb0-7346-5f1d-9dcd-242a821b3b73"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "445",
+                  "443"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:7383b57d-459f-54db-a473-b7ac13b8deb1",
+            "name": "Allow DR applications to monitoring",
+            "description": "SYNTHETIC: Telemetry to central monitoring",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:4d602a3c-1291-5eff-80ac-0270fa9e2cbf"
+              },
+              {
+                "id": "urn:vcloud:firewallGroup:c620960d-1b86-5035-b2d2-499baeb25c83"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:22930d6c-b12f-509e-8116-245c3f2c03ac"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "443",
+                  "6514"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:bbfa6853-bdc7-5208-ae3d-b0bfd653a46f",
+            "name": "Block client direct DR SQL",
+            "description": "SYNTHETIC: Direct SQL not approved from client tier",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:d0f8d1fe-9549-5b60-903e-ea99e101e1bf"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:16b789c5-c92a-5ed0-9dad-ea1e288300ed"
+              }
+            ],
+            "actionValue": "DROP",
+            "active": true,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "1433"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "urn:vcloud:firewallRule:234195b0-4804-52cd-b906-52eaa54ad838",
+            "name": "Disabled DR emergency RDP",
+            "description": "SYNTHETIC: Disabled emergency access example",
+            "sourceFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:d0f8d1fe-9549-5b60-903e-ea99e101e1bf"
+              }
+            ],
+            "destinationFirewallGroups": [
+              {
+                "id": "urn:vcloud:firewallGroup:5348ef1a-2b73-5e46-8f3f-8abd43a6db0c"
+              }
+            ],
+            "actionValue": "ALLOW",
+            "active": false,
+            "logging": true,
+            "simulatorServices": [
+              {
+                "protocol": "TCP",
+                "ports": [
+                  "3389"
+                ]
+              }
+            ]
+          }
+        ],
+        "defaultRules": []
+      },
+      "ipSets": [
+        {
+          "id": "urn:vcloud:firewallGroup:82c5c491-ece8-5c39-89eb-2f83af5b855e",
+          "name": "DomainC SQL DR replicas",
+          "description": "SYNTHETIC C1 IP group: DomainC SQL DR replicas",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.20.21",
+            "10.52.20.22"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:16b789c5-c92a-5ed0-9dad-ea1e288300ed",
+          "name": "SQL DR listener",
+          "description": "SYNTHETIC C1 IP group: SQL DR listener",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.20.20"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:183a1c86-2b46-57fb-9540-df16e5ef7b33",
+          "name": "DomainB SQL FCI nodes",
+          "description": "SYNTHETIC C1 IP group: DomainB SQL FCI nodes",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.21",
+            "10.51.20.22"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:cd732eb0-7346-5f1d-9dcd-242a821b3b73",
+          "name": "DR file servers",
+          "description": "SYNTHETIC C1 IP group: DR file servers",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.20.30",
+            "10.52.20.31"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:5348ef1a-2b73-5e46-8f3f-8abd43a6db0c",
+          "name": "DR RDS session hosts",
+          "description": "SYNTHETIC C1 IP group: DR RDS session hosts",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.20.45",
+            "10.52.20.46"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:28e8d1e0-bab1-5994-bca9-34be85b77a9c",
+          "name": "DR MCM distribution point",
+          "description": "SYNTHETIC C1 IP group: DR MCM distribution point",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.20.51"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:37d8ff3c-ed42-545e-a3ac-cebc58f84dd8",
+          "name": "DomainC WSUS",
+          "description": "SYNTHETIC C1 IP group: DomainC WSUS",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.20.52"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:4d602a3c-1291-5eff-80ac-0270fa9e2cbf",
+          "name": "DR web server",
+          "description": "SYNTHETIC C1 IP group: DR web server",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.20.60"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:c620960d-1b86-5035-b2d2-499baeb25c83",
+          "name": "DR application server",
+          "description": "SYNTHETIC C1 IP group: DR application server",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.20.62"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:92a1bc41-83a3-564d-9df8-6b2ed24637a0",
+          "name": "DR Azure DevOps deployment agent",
+          "description": "SYNTHETIC C1 IP group: DR Azure DevOps deployment agent",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.20.72"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:bf02aeb2-bcfe-55ad-8133-12fb2dffab59",
+          "name": "DomainB ADO servers",
+          "description": "SYNTHETIC C1 IP group: DomainB ADO servers",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.70",
+            "10.51.20.71"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:ac6d8b83-f2ad-57e9-874f-c6daa81bb765",
+          "name": "DR backup proxy",
+          "description": "SYNTHETIC C1 IP group: DR backup proxy",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.20.90"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:d0f8d1fe-9549-5b60-903e-ea99e101e1bf",
+          "name": "DomainC client",
+          "description": "SYNTHETIC C1 IP group: DomainC client",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.20.110"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:af3a5b04-1d79-5acd-bc2e-1c6a15f01c74",
+          "name": "DomainC and trusted DomainA DCs",
+          "description": "SYNTHETIC C1 IP group: DomainC and trusted DomainA DCs",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.52.10.10",
+            "10.52.10.11",
+            "10.50.10.10",
+            "10.50.10.11"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:b317f358-5b56-5a1a-9718-f850cc7c4648",
+          "name": "DomainA privileged management endpoints",
+          "description": "SYNTHETIC C1 IP group: DomainA privileged management endpoints",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.10.40",
+            "10.50.10.45"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:22930d6c-b12f-509e-8116-245c3f2c03ac",
+          "name": "Central monitoring",
+          "description": "SYNTHETIC C1 IP group: Central monitoring",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.50.20.10",
+            "10.50.20.11"
+          ]
+        },
+        {
+          "id": "urn:vcloud:firewallGroup:5d612dfb-8e0e-5874-a972-e8560f725906",
+          "name": "Primary RDS Gateway",
+          "description": "SYNTHETIC C1 IP group: Primary RDS Gateway",
+          "typeValue": "IP_SET",
+          "ipAddresses": [
+            "10.51.20.42",
+            "10.51.20.43"
+          ]
+        }
+      ],
+      "reservations": [
+        {
+          "id": "urn:vcloud:networkManualIpReservation:f7b8dc42-c301-571e-a7ec-e8792f204e51",
+          "name": "C-SQLDR01",
+          "description": "SYNTHETIC: SQL Server DR replica \u2014 SQL availability-group replica (synthetic DR)",
+          "networkRef": {
+            "id": "urn:vcloud:network:02f7f342-5349-5a15-8c6d-1b3dfae003c3"
+          },
+          "ipAddresses": "10.52.20.21"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:d888810c-f6ec-5d52-8c33-3f3bba1aa8fe",
+          "name": "C-SQLDR02",
+          "description": "SYNTHETIC: SQL Server DR replica \u2014 Second replica node",
+          "networkRef": {
+            "id": "urn:vcloud:network:02f7f342-5349-5a15-8c6d-1b3dfae003c3"
+          },
+          "ipAddresses": "10.52.20.22"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:a7f409aa-4e91-58bf-a6d2-16422c75e6da",
+          "name": "C-SQLDRVIP",
+          "description": "SYNTHETIC: DR SQL listener \u2014 Synthetic DR listener / virtual IP",
+          "networkRef": {
+            "id": "urn:vcloud:network:02f7f342-5349-5a15-8c6d-1b3dfae003c3"
+          },
+          "ipAddresses": "10.52.20.20"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:c08a3cc9-eb77-59ff-a34a-49a3d5fc1814",
+          "name": "C-FILEDR01",
+          "description": "SYNTHETIC: File server DR \u2014 DR SMB shares / DFS target",
+          "networkRef": {
+            "id": "urn:vcloud:network:02f7f342-5349-5a15-8c6d-1b3dfae003c3"
+          },
+          "ipAddresses": "10.52.20.30"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:50abf44b-e04c-5db3-a25e-1e6502677e20",
+          "name": "C-FILEDR02",
+          "description": "SYNTHETIC: File server DR \u2014 Secondary DR file server",
+          "networkRef": {
+            "id": "urn:vcloud:network:02f7f342-5349-5a15-8c6d-1b3dfae003c3"
+          },
+          "ipAddresses": "10.52.20.31"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:c9a47470-255e-5d07-b6ac-5fa502cda35a",
+          "name": "C-RDSDR01",
+          "description": "SYNTHETIC: RDS DR session host \u2014 Standby RDS session host",
+          "networkRef": {
+            "id": "urn:vcloud:network:02f7f342-5349-5a15-8c6d-1b3dfae003c3"
+          },
+          "ipAddresses": "10.52.20.45"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:8d3b2da6-d805-5180-9086-792f3c334d6f",
+          "name": "C-RDSDR02",
+          "description": "SYNTHETIC: RDS DR session host \u2014 Standby RDS session host",
+          "networkRef": {
+            "id": "urn:vcloud:network:02f7f342-5349-5a15-8c6d-1b3dfae003c3"
+          },
+          "ipAddresses": "10.52.20.46"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:4f9d82a9-e960-560c-9efd-c940e7186361",
+          "name": "C-MCMDP01",
+          "description": "SYNTHETIC: ConfigMgr distribution point \u2014 DomainC software distribution point",
+          "networkRef": {
+            "id": "urn:vcloud:network:02f7f342-5349-5a15-8c6d-1b3dfae003c3"
+          },
+          "ipAddresses": "10.52.20.51"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:8406e212-a878-5d46-85d9-040c74476fa1",
+          "name": "C-WSUS01",
+          "description": "SYNTHETIC: WSUS \u2014 DomainC Windows update service",
+          "networkRef": {
+            "id": "urn:vcloud:network:02f7f342-5349-5a15-8c6d-1b3dfae003c3"
+          },
+          "ipAddresses": "10.52.20.52"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:9ce25046-b629-5963-8e24-6718b7432582",
+          "name": "C-WEB01",
+          "description": "SYNTHETIC: Disaster recovery web \u2014 Standby web application server",
+          "networkRef": {
+            "id": "urn:vcloud:network:02f7f342-5349-5a15-8c6d-1b3dfae003c3"
+          },
+          "ipAddresses": "10.52.20.60"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:92609e1c-ee29-5db1-9b2e-ecb83eb25fea",
+          "name": "C-APP01",
+          "description": "SYNTHETIC: Disaster recovery application \u2014 Standby application server",
+          "networkRef": {
+            "id": "urn:vcloud:network:02f7f342-5349-5a15-8c6d-1b3dfae003c3"
+          },
+          "ipAddresses": "10.52.20.62"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:3117c870-c3d5-541a-a53c-83eb9c271a08",
+          "name": "C-ADOAGENT01",
+          "description": "SYNTHETIC: Azure DevOps deployment agent \u2014 Synthetic cross-domain deployment agent",
+          "networkRef": {
+            "id": "urn:vcloud:network:02f7f342-5349-5a15-8c6d-1b3dfae003c3"
+          },
+          "ipAddresses": "10.52.20.72"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:d9245bd9-e85f-5f2f-9045-9e5dcb713125",
+          "name": "C-BACKUP01",
+          "description": "SYNTHETIC: Backup proxy \u2014 DomainC backup proxy",
+          "networkRef": {
+            "id": "urn:vcloud:network:02f7f342-5349-5a15-8c6d-1b3dfae003c3"
+          },
+          "ipAddresses": "10.52.20.90"
+        },
+        {
+          "id": "urn:vcloud:networkManualIpReservation:dd9c4d99-14cb-5687-87b7-be7d52ee1c9a",
+          "name": "C-CLIENT01",
+          "description": "SYNTHETIC: Workstation \u2014 Synthetic DomainC client",
+          "networkRef": {
+            "id": "urn:vcloud:network:02f7f342-5349-5a15-8c6d-1b3dfae003c3"
+          },
+          "ipAddresses": "10.52.20.110"
+        }
+      ]
+    }
+  ]
+}

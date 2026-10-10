@@ -7,6 +7,12 @@
                       "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
                       "address":  "10.51.20.50",
                       "description":  "Synthetic IP reservation"
+                  },
+                  {
+                      "key":  "reservation-10.51.20.51",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.51",
+                      "description":  ""
                   }
               ]
 }

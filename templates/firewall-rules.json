@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "synthetic": true,
+  "templates": [
+    {"key": "https", "name": "HTTPS access", "description": "Review sources and destinations before enabling HTTPS", "action": "ALLOW", "logging": true, "services": [{"protocol": "TCP", "ports": ["443"]}]},
+    {"key": "dns", "name": "DNS services", "description": "Review permitted resolver destinations and required protocols", "action": "ALLOW", "logging": true, "services": [{"protocol": "UDP", "ports": ["53"]}, {"protocol": "TCP", "ports": ["53"]}]},
+    {"key": "deny", "name": "Explicit deny", "description": "Review ordering and match scope before enabling", "action": "DROP", "logging": true, "services": []}
+  ]
+}

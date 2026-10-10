@@ -5,7 +5,7 @@
                    "vcdVersion":  "10.6",
                    "networkBacking":  "NSX-T",
                    "powershellVersion":  "5.1",
-                   "mode":  "Read-only VCD / Phase 3"
+                   "mode":  "Network Configuration Management"
                },
     "runtime":  {
                     "maximumWorkers":  3,

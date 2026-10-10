@@ -39,6 +39,12 @@ Invoke-TestCase -Name 'VCD connection-only operation does not retrieve or save n
     $scratch = Join-Path ([IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString('n'))
     $result = Invoke-VcdReadOperation -VcdConfiguration (New-TestVcdConfiguration) -OutputDirectory $scratch -RequestSender $fake.RequestSender -ConnectionOnly
     Assert-Equal '' $result.SnapshotPath
+    Assert-True $result.Connected
+    Assert-Equal '39.0' $result.ApiVersion
+    Assert-True ($result.PSObject.Properties.Name -cnotcontains 'FirewallRuleCount') 'Connection check is not a snapshot and must not invent resource counts'
+    Import-Module (Join-Path $ProjectRoot 'src\Application\VcdRead\VcdReadSummary.psm1') -ErrorAction Stop
+    $summary = New-VcdReadCompletionSummary -Result $result -ConnectionOnly
+    Assert-True ($summary.Message -match 'Connected successfully') 'Real connection-only result must format without missing-count errors'
     Assert-Equal 2 $fake.Calls.Count
     Assert-True (-not [IO.Directory]::Exists($scratch))
 }

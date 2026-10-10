@@ -7,7 +7,7 @@
                       "name":  "DomainB-T1-Allow-HTTPS",
                       "description":  "Synthetic rule; no traffic is actually permitted",
                       "order":  0,
-                      "action":  "DROP",
+                      "action":  "ALLOW",
                       "enabled":  true,
                       "logging":  true,
                       "sourceIpSets":  [

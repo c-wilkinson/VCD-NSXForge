@@ -13,7 +13,7 @@ function Add-NetworkDialogField {
     $label=[System.Windows.Forms.Label]::new()
     $label.Text=$Caption;$label.AutoSize=$true;$label.Margin=[System.Windows.Forms.Padding]::new(4,10,4,5)
     $Layout.Controls.Add($label,0,$row)
-    $Control.Name=$ControlName;$Control.Margin=[System.Windows.Forms.Padding]::new(4,6,8,6)
+    $Control.Name=$ControlName;$Control.AccessibleName=$Caption;$Control.Margin=[System.Windows.Forms.Padding]::new(4,6,8,6)
     $Control.Dock='Top'
     $Layout.Controls.Add($Control,1,$row)
     return $Control
@@ -116,10 +116,12 @@ function New-NetworkItemDialog {
         [Parameter(Mandatory)][ValidateSet('edgeFirewallRules','ipSets','manualIpReservations')][string]$ResourceKind,
         [Parameter(Mandatory)]$Documents,
         $Original = $null,
+        $Prefill = $null,
         [string]$NetworkId = '',
         [string]$NetworkLabel = 'Current gateway network'
     )
     $create = ($null -eq $Original)
+    $initial = if ($create -and $null -ne $Prefill) { $Prefill } else { $Original }
     $title = switch ($ResourceKind) {
         'edgeFirewallRules' {'Firewall rule'}
         'ipSets' {'IP Set'}
@@ -160,7 +162,7 @@ function New-NetworkItemDialog {
     # ErrorRecords, not our Label; attempted .Text writes then throw.
     $validationLabel=[System.Windows.Forms.Label]::new()
     $validationLabel.Name='NetworkItemValidation'
-    $validationLabel.ForeColor=[System.Drawing.Color]::DarkRed
+    $validationLabel.ForeColor=[System.Drawing.SystemColors]::ControlText;$validationLabel.AccessibleName='Form validation errors'
     $validationLabel.TextAlign='MiddleLeft'
     $validationLabel.AutoEllipsis=$true
     $validationLabel.Dock='Fill'
@@ -181,11 +183,11 @@ function New-NetworkItemDialog {
     $footer.Controls.Add($actions,0,2)
 
     $cancel=[System.Windows.Forms.Button]::new()
-    $cancel.Name='CancelNetworkItemButton';$cancel.Text='Cancel'
+    $cancel.Name='CancelNetworkItemButton';$cancel.Text='Cancel';$cancel.AccessibleName='Cancel without saving'
     $cancel.Size=[System.Drawing.Size]::new(110,34)
     $cancel.DialogResult=[System.Windows.Forms.DialogResult]::Cancel
     $save=[System.Windows.Forms.Button]::new()
-    $save.Name='SaveNetworkItemButton'
+    $save.Name='SaveNetworkItemButton';$save.AccessibleName='Save rule to local draft'
     $save.Text=$(if ($create) { 'Add to draft' } else { 'Save changes' })
     $save.Size=[System.Drawing.Size]::new(145,34)
     $save.DialogResult=[System.Windows.Forms.DialogResult]::None
@@ -203,16 +205,16 @@ function New-NetworkItemDialog {
     $ipSetKeys=@()
 
     if ($ResourceKind -ne 'manualIpReservations') {
-        $name=Add-NetworkDialogField $generalLayout 'Name *' (New-NetworkDialogText -Text $(if ($create) {''} else {[string]$Original.name})) 'NetworkItemName'
+        $name=Add-NetworkDialogField $generalLayout 'Name *' (New-NetworkDialogText -Text $(if ($null -eq $initial) {''} else {[string]$initial.name})) 'NetworkItemName'
     }
-    $key=Add-NetworkDialogField $generalLayout 'Internal ID (optional)' (New-NetworkDialogText -Text $(if ($create) {''} else {[string]$Original.key})) 'NetworkItemKey'
+    $key=Add-NetworkDialogField $generalLayout 'Internal ID (optional)' (New-NetworkDialogText -Text $(if ($null -eq $initial) {''} else {[string]$initial.key})) 'NetworkItemKey'
     if (-not $create) { $key.ReadOnly=$true;$key.BackColor=[System.Drawing.SystemColors]::Control }
     $existingDescription=''
-    if (-not $create -and @($Original.PSObject.Properties.Name) -contains 'description') { $existingDescription=[string]$Original.description }
+    if ($null -ne $initial -and @($initial.PSObject.Properties.Name) -contains 'description') { $existingDescription=[string]$initial.description }
     $description=Add-NetworkDialogField $generalLayout 'Description' (New-NetworkDialogText -Text $existingDescription -Multiline) 'NetworkItemDescription'
 
     if ($ResourceKind -eq 'ipSets') {
-        $addresses=Add-NetworkDialogField $generalLayout 'IP addresses / CIDRs *' (New-NetworkDialogText -Text $(if ($create) {''} else { @($Original.addresses) -join [Environment]::NewLine }) -Multiline) 'NetworkItemAddresses'
+        $addresses=Add-NetworkDialogField $generalLayout 'IP addresses / CIDRs *' (New-NetworkDialogText -Text $(if ($null -eq $initial) {''} else { @($initial.addresses) -join [Environment]::NewLine }) -Multiline) 'NetworkItemAddresses'
         $hint=[System.Windows.Forms.Label]::new();$hint.Text='Enter one address or CIDR per line. Commas are also accepted.';$hint.AutoSize=$true
         $generalLayout.RowCount++
         $generalLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
@@ -222,15 +224,15 @@ function New-NetworkItemDialog {
         $network=Add-NetworkDialogField $generalLayout 'Network' (New-NetworkDialogText -Text $NetworkLabel) 'NetworkItemNetworkId'
         $network.ReadOnly=$true
         $network.Tag=$(if ($create) { $NetworkId } else { [string]$Original.networkId })
-        $address=Add-NetworkDialogField $generalLayout 'Reserved IP address *' (New-NetworkDialogText -Text $(if ($create) {''} else {[string]$Original.address})) 'NetworkItemAddress'
+        $address=Add-NetworkDialogField $generalLayout 'Reserved IP address *' (New-NetworkDialogText -Text $(if ($null -eq $initial) {''} else {[string]$initial.address})) 'NetworkItemAddress'
     }
     else {
         $action=[System.Windows.Forms.ComboBox]::new();$action.DropDownStyle='DropDownList';$action.Items.AddRange([object[]]@('ALLOW','DROP','REJECT'))
         $null=Add-NetworkDialogField $generalLayout 'Action' $action 'NetworkItemAction'
-        $chosen=if ($create) {'ALLOW'} else {[string]$Original.action};$action.SelectedItem=$chosen
-        $enabled=[System.Windows.Forms.CheckBox]::new();$enabled.Text='Rule enabled';$enabled.Checked=($create -or [bool]$Original.enabled)
+        $chosen=if ($null -eq $initial) {'ALLOW'} else {[string]$initial.action};$action.SelectedItem=$chosen
+        $enabled=[System.Windows.Forms.CheckBox]::new();$enabled.Text='Rule enabled';$enabled.Checked=if ($null -eq $initial) { $true } else { [bool]$initial.enabled }
         $null=Add-NetworkDialogField $generalLayout 'Status' $enabled 'NetworkItemEnabled'
-        $logging=[System.Windows.Forms.CheckBox]::new();$logging.Text='Log matching traffic';$logging.Checked=($create -or [bool]$Original.logging)
+        $logging=[System.Windows.Forms.CheckBox]::new();$logging.Text='Log matching traffic';$logging.Checked=if ($null -eq $initial) { $true } else { [bool]$initial.logging }
         $null=Add-NetworkDialogField $generalLayout 'Logging' $logging 'NetworkItemLogging'
         $orderLabel=[System.Windows.Forms.Label]::new();$orderLabel.AutoSize=$true
         $orderLabel.Text=if ($create) {'New rule is appended to the bottom; use Move Up / Down to reorder.'} else {'Rule priority is changed with Move Up / Down in the firewall list.'}
@@ -244,16 +246,16 @@ function New-NetworkItemDialog {
         $addressLayout.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent,50)) | Out-Null
         $sourceBox=[System.Windows.Forms.GroupBox]::new();$sourceBox.Text='Source IP Sets (none = Any)';$sourceBox.Dock='Fill';$sourceBox.Padding=[System.Windows.Forms.Padding]::new(12)
         $destinationBox=[System.Windows.Forms.GroupBox]::new();$destinationBox.Text='Destination IP Sets (none = Any)';$destinationBox.Dock='Fill';$destinationBox.Padding=[System.Windows.Forms.Padding]::new(12)
-        $sources=[System.Windows.Forms.CheckedListBox]::new();$sources.Name='NetworkItemSources';$sources.Dock='Fill';$sources.CheckOnClick=$true
-        $destinations=[System.Windows.Forms.CheckedListBox]::new();$destinations.Name='NetworkItemDestinations';$destinations.Dock='Fill';$destinations.CheckOnClick=$true
+        $sources=[System.Windows.Forms.CheckedListBox]::new();$sources.Name='NetworkItemSources';$sources.AccessibleName='Source IP Sets';$sources.Dock='Fill';$sources.CheckOnClick=$true
+        $destinations=[System.Windows.Forms.CheckedListBox]::new();$destinations.Name='NetworkItemDestinations';$destinations.AccessibleName='Destination IP Sets';$destinations.Dock='Fill';$destinations.CheckOnClick=$true
         $ipSetKeys=@()
         foreach ($set in @($Documents.ipSets.items | Sort-Object name)) {
             $ipSetKeys+= [string]$set.key
             $si=$sources.Items.Add(('{0} ({1})' -f $set.name,$set.key))
             $di=$destinations.Items.Add(('{0} ({1})' -f $set.name,$set.key))
-            if (-not $create) {
-                if (@($Original.sourceIpSets) -ccontains $set.key) { $sources.SetItemChecked($si,$true) }
-                if (@($Original.destinationIpSets) -ccontains $set.key) { $destinations.SetItemChecked($di,$true) }
+            if ($null -ne $initial) {
+                if (@($initial.sourceIpSets) -ccontains $set.key) { $sources.SetItemChecked($si,$true) }
+                if (@($initial.destinationIpSets) -ccontains $set.key) { $destinations.SetItemChecked($di,$true) }
             }
         }
         $sourceBox.Controls.Add($sources);$destinationBox.Controls.Add($destinations)
@@ -270,13 +272,13 @@ function New-NetworkItemDialog {
         $removeService=[System.Windows.Forms.Button]::new();$removeService.Text='Remove selected';$removeService.Name='NetworkItemRemoveService';$removeService.Width=130
         $tools.Controls.AddRange([System.Windows.Forms.Control[]]@($addService,$removeService))
         $services=[System.Windows.Forms.DataGridView]::new();$services.Dock='Fill';$services.Name='NetworkItemServices'
-        $services.AllowUserToAddRows=$false;$services.AllowUserToDeleteRows=$false;$services.AutoSizeColumnsMode='Fill'
+        $services.AccessibleName='Rule services and destination ports';$services.AllowUserToAddRows=$false;$services.AllowUserToDeleteRows=$false;$services.AutoSizeColumnsMode='Fill'
         $services.SelectionMode='FullRowSelect';$services.MultiSelect=$false;$services.RowHeadersVisible=$false
         $protocolColumn=[System.Windows.Forms.DataGridViewComboBoxColumn]::new();$protocolColumn.Name='Protocol';$protocolColumn.HeaderText='Protocol';$protocolColumn.Items.AddRange([object[]]@('TCP','UDP','ICMP','ANY'))
         $portColumn=[System.Windows.Forms.DataGridViewTextBoxColumn]::new();$portColumn.Name='Ports';$portColumn.HeaderText='Destination ports (e.g. 443, 8000-8010)'
         $services.Columns.Add($protocolColumn) | Out-Null;$services.Columns.Add($portColumn) | Out-Null
-        if (-not $create) {
-            foreach ($s in @($Original.services)) { [void]$services.Rows.Add([string]$s.protocol,(@($s.ports) -join ', ')) }
+        if ($null -ne $initial) {
+            foreach ($s in @($initial.services)) { [void]$services.Rows.Add([string]$s.protocol,(@($s.ports) -join ', ')) }
         }
         $addService.Add_Click({ [void]$services.Rows.Add('TCP','443') }.GetNewClosure())
         $removeService.Add_Click({ if ($null -ne $services.CurrentRow) { $services.Rows.Remove($services.CurrentRow) } }.GetNewClosure())
@@ -324,11 +326,12 @@ function Show-NetworkItemDialog {
         [Parameter(Mandatory)][ValidateSet('edgeFirewallRules','ipSets','manualIpReservations')][string]$ResourceKind,
         [Parameter(Mandatory)]$Documents,
         $Original=$null,
+        $Prefill=$null,
         [string]$NetworkId='',
         [string]$NetworkLabel='Current gateway network',
         [System.Windows.Forms.IWin32Window]$Owner=$null
     )
-    $dialog=New-NetworkItemDialog -ResourceKind $ResourceKind -Documents $Documents -Original $Original -NetworkId $NetworkId -NetworkLabel $NetworkLabel
+    $dialog=New-NetworkItemDialog -ResourceKind $ResourceKind -Documents $Documents -Original $Original -Prefill $Prefill -NetworkId $NetworkId -NetworkLabel $NetworkLabel
     try {
         $outcome=if ($null -eq $Owner) { $dialog.Form.ShowDialog() } else { $dialog.Form.ShowDialog($Owner) }
         if ($outcome -eq [System.Windows.Forms.DialogResult]::OK) { return $dialog.Result.Value }

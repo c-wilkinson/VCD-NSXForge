@@ -22,3 +22,6 @@ config/application.json.before-simulator
 # Synthetic simulator edits (runtime only; never commit)
 simulator/runtime-state.json
 simulator/runtime-state.json.*
+
+# Engineer-owned local templates (can contain rule descriptions)
+templates/user-firewall-rules.json

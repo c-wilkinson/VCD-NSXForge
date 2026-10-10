@@ -5,6 +5,7 @@ Import-Module (Join-Path $PSScriptRoot '..\..\Domain\Traffic\Traffic.psm1') -Err
 Import-Module (Join-Path $PSScriptRoot '..\..\Domain\Topology\TopologyPolicy.psm1') -ErrorAction Stop
 Import-Module (Join-Path $PSScriptRoot '..\..\Domain\State\StateModel.psm1') -ErrorAction Stop
 Import-Module (Join-Path $PSScriptRoot '..\..\Domain\Planning\Planning.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\..\Domain\Access\SimulatorRbac.psm1') -ErrorAction Stop
 
 function Get-SimulatorItemKey {
     param([string]$Id)
@@ -160,6 +161,8 @@ function Invoke-SimulatorApply {
     $actor=[string]$Request.actorDomain; $actorTier=[int]$Request.actorTier
     $permission=Get-SimulatorAccessDecision -Dataset $Dataset -SourceDomain $actor -SourceTier $actorTier -TargetDomain $current.domain -TargetTier ([int]$current.tier)
     if (-not $permission.canManage) { throw '403: Synthetic domain/tier management policy denies the change.' }
+    $role=Get-SimulatorActorRole -Dataset $Dataset -ActorDomain $actor -ActorTier $actorTier -TargetDomain $current.domain -TargetTier ([int]$current.tier)
+    if (-not (Test-SimulatorRolePermission -Role $role.Role -Operation Apply)) { throw '403: Synthetic role lacks permission to apply; Tier 0 administrator required.' }
     $docs=[ordered]@{}
     foreach ($kind in @('ipSets','edgeFirewallRules','manualIpReservations')) {
         if ($null -eq $Request.documents.PSObject.Properties[$kind]) { throw "Missing desired $kind document." }
