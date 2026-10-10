@@ -1,0 +1,57 @@
+name: PowerShell 5.1 CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: powershell-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  headless-tests:
+    name: PowerShell 5.1 NUnit
+    runs-on: windows-2022
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Verify Windows PowerShell 5.1
+        shell: cmd
+        run: >-
+          powershell.exe -NoLogo -NoProfile -NonInteractive -STA -Command
+          "if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSEdition -ne 'Desktop')
+          { throw 'Windows PowerShell 5.1 is required' };
+          Write-Host ('Running ' + $PSVersionTable.PSVersion.ToString())"
+
+      - name: Run headless NUnit 3 tests
+        shell: cmd
+        run: >-
+          powershell.exe -NoLogo -NoProfile -NonInteractive -STA -ExecutionPolicy Bypass
+          -File ".\tools\Invoke-Tests.ps1"
+          -NUnitPath ".\test-results\TEST-VcdNetworkManager.xml"
+
+      - name: Publish test results to GitHub run summary
+        if: always()
+        shell: cmd
+        run: >-
+          powershell.exe -NoLogo -NoProfile -NonInteractive -STA -ExecutionPolicy Bypass
+          -File ".\tools\Write-GitHubTestSummary.ps1"
+          -NUnitPath ".\test-results\TEST-VcdNetworkManager.xml"
+
+      - name: Upload NUnit 3 XML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nunit-ps51-headless
+          path: test-results/TEST-VcdNetworkManager.xml
+          retention-days: 14
+          if-no-files-found: error
