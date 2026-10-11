@@ -6,6 +6,7 @@ Import-Module (Join-Path $PSScriptRoot 'VcdSnapshot.psm1') -Force
 # is not automatically exported into this module's command resolution scope.
 Import-Module (Join-Path $PSScriptRoot '..\..\Domain\State\VcdPolicyModel.psm1') -ErrorAction Stop
 Import-Module (Join-Path $PSScriptRoot '..\..\Infrastructure\State\VcdPolicyRepository.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\..\Domain\Access\VcdAuthorization.psm1') -ErrorAction Stop
 
 function Invoke-VcdReadOperation {
     [CmdletBinding(DefaultParameterSetName='Credential')]
@@ -66,9 +67,31 @@ function Invoke-VcdReadOperation {
         $session = Invoke-VcdRead -Client $client -Path '/cloudapi/1.0.0/sessions/current' -CancellationToken $CancellationToken
         if ($null -eq $session -or -not $session.id) { throw 'VCD did not return a valid current session.' }
         $CancellationToken.ThrowIfCancellationRequested()
-        if ($ConnectionOnly) { return [pscustomobject]@{ Connected=$true; ApiVersion=$client.ApiVersion; SnapshotPath=''; ObservedImported=$false } }
+        # Live identity is derived exclusively from the authenticated session response.
+        # Simulator policies are synthetic and are never treated as VCD grants.
+        $identity = $null
+        if (-not $simulatorMode) {
+            $loginScope = if ($VcdConfiguration.PSObject.Properties.Name -contains 'loginScope' -and [string]$VcdConfiguration.loginScope) { [string]$VcdConfiguration.loginScope } else { 'Tenant' }
+            $targetOrg = if ($VcdConfiguration.PSObject.Properties.Name -contains 'tenantContextOrgId') { [string]$VcdConfiguration.tenantContextOrgId } else { '' }
+            $identity = New-VcdLiveIdentity -Session $session -LoginScope $loginScope -TenantContextOrgId $targetOrg
+            Confirm-VcdLiveAuthorization -Identity $identity -Action Connect
+        }
+        $identityLabel = if ($null -ne $identity) { $identity.User + ' (' + $identity.TargetOrgId + ')' } else { 'Synthetic simulator identity' }
+        if ($ConnectionOnly) { return [pscustomobject]@{ Connected=$true; ApiVersion=$client.ApiVersion; SnapshotPath=''; ObservedImported=$false; IdentityLabel=$identityLabel } }
+        if (-not $simulatorMode) {
+            # No firewall, network or observed-state read is allowed until its
+            # ownership is proved by authenticated, server-returned metadata.
+            $gateway = Get-VcdGatewayOwnership -Client $client -GatewayId ([string]$VcdConfiguration.gatewayId) -CancellationToken $CancellationToken
+            Confirm-VcdLiveAuthorization -Identity $identity -Action Read -ResourceId ([string]$VcdConfiguration.gatewayId) -Resource $gateway
+            foreach ($networkId in @($VcdConfiguration.networkIds)) {
+                $CancellationToken.ThrowIfCancellationRequested()
+                $network = Get-VcdNetworkOwnership -Client $client -NetworkId ([string]$networkId) -CancellationToken $CancellationToken
+                Confirm-VcdLiveAuthorization -Identity $identity -Action Read -ResourceId ([string]$networkId) -Resource $network
+            }
+        }
         $snapshot = Get-VcdReadSnapshot -Client $client -GatewayId ([string]$VcdConfiguration.gatewayId) -NetworkIds @($VcdConfiguration.networkIds) -CancellationToken $CancellationToken
         $CancellationToken.ThrowIfCancellationRequested()
+        Confirm-VcdArtifactContainsNoSecrets -Value $snapshot
         # Persist raw data first so unsupported mapping can be diagnosed offline.
         $rawPath = Save-VcdRawSnapshot -Snapshot $snapshot -OutputDirectory $OutputDirectory
         $policyPath = ''
@@ -90,12 +113,25 @@ function Invoke-VcdReadOperation {
             }
         }
         return [pscustomobject]@{
-            Connected = $true; ApiVersion = $client.ApiVersion
+            Connected = $true; ApiVersion = $client.ApiVersion; IdentityLabel = $identityLabel
             SnapshotPath = $rawPath; PolicyPath = $policyPath; PolicyImported = [bool]($WriteObserved -or $WritePolicyObserved); ObservedImported = [bool]$WriteObserved
             FirewallRuleCount = @($snapshot.firewall.userDefinedRules).Count
             IpSetCount = @($snapshot.ipSetDetails).Count
             ReservationCount = @($snapshot.manualIpReservations).Count
         }
+    }
+    catch [System.OperationCanceledException] { throw }
+    catch {
+        # Untrusted servers and injected senders can put arbitrary data into
+        # exception text. Only narrowly recognised, generated messages escape.
+        $failure = [string]$_.Exception.Message
+        if ($failure -match '^VCD identity denied: [A-Za-z .-]+\.$' -or
+            $failure -match '^VCD authorisation denied: [A-Za-z .-]+\.$' -or
+            $failure -match '^VCD GET failed: HTTP [0-9]{3}\.$' -or
+            $failure -match '^VCD session login failed: HTTP [0-9]{3}\.$') {
+            throw $failure
+        }
+        throw 'VCD operation failed; check connectivity, identity, scope and policy support. Server details have been withheld.'
     }
     finally { if ($null -ne $transport) { Close-VcdHttpTransport -Transport $transport } }
 }

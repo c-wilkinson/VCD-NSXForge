@@ -1,4 +1,5 @@
 {
   "id": "urn:vcloud:session:66666666-6666-4666-8666-666666666666",
-  "user": "engineer"
+  "user": "engineer",
+  "orgRef": {"id":"urn:vcloud:org:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"}
 }

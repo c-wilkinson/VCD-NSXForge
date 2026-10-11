@@ -16,7 +16,13 @@ function New-FakeVcdReadSender {
         if ($simulateFailure -and $url.AbsolutePath -like '*firewall/rules') { throw 'HTTP 503 simulated' }
         switch -Regex ($url.AbsolutePath) {
             '^/api/versions$' { return $versions }
-            '^/cloudapi/1.0.0/sessions/current$' { return [pscustomobject]@{ id='urn:vcloud:session:demo' } }
+            '^/cloudapi/1.0.0/sessions/current$' { return [pscustomobject]@{ id='urn:vcloud:session:demo'; user='engineer'; orgRef=[pscustomobject]@{ id='urn:vcloud:org:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } } }
+            '^/cloudapi/1.0.0/edgeGateways/[^/]+$' {
+                return [pscustomobject]@{ id='urn:vcloud:gateway:55555555-5555-4555-8555-555555555555'; orgRef=[pscustomobject]@{id='urn:vcloud:org:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'} }
+            }
+            '^/cloudapi/1.0.0/orgVdcNetworks/[^/]+$' {
+                return [pscustomobject]@{ id='urn:vcloud:network:44444444-4444-4444-8444-444444444444'; orgRef=[pscustomobject]@{id='urn:vcloud:org:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'} }
+            }
             '^/cloudapi/2.0.0/edgeGateways/[^/]+/firewall/rules$' { return $firewall }
             '^/cloudapi/1.0.0/firewallGroups/summaries$' {
                 return [pscustomobject]@{ pageCount=1; values=@([pscustomobject]@{ id=$group.id; name=$group.name; typeValue='IP_SET' }) }

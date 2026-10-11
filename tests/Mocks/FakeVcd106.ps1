@@ -38,6 +38,14 @@ function New-FakeVcd106 {
                 return $versions
             }
             '^/cloudapi/1.0.0/sessions/current$' { return $session }
+            '^/cloudapi/1.0.0/edgeGateways/([^/]+)$' {
+                if ([uri]::UnescapeDataString($Matches[1]) -cne $GatewayId) { throw 'FAKE_VCD_106_WRONG_GATEWAY' }
+                return [pscustomobject]@{ id=$GatewayId; orgRef=[pscustomobject]@{id='urn:vcloud:org:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'} }
+            }
+            '^/cloudapi/1.0.0/orgVdcNetworks/([^/]+)$' {
+                if ([uri]::UnescapeDataString($Matches[1]) -cne $NetworkId) { throw 'FAKE_VCD_106_WRONG_NETWORK' }
+                return [pscustomobject]@{ id=$NetworkId; orgRef=[pscustomobject]@{id='urn:vcloud:org:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'} }
+            }
             '^/cloudapi/2.0.0/edgeGateways/([^/]+)/firewall/rules$' {
                 if ([uri]::UnescapeDataString($Matches[1]) -cne $GatewayId) { throw 'FAKE_VCD_106_WRONG_GATEWAY' }
                 return $firewall

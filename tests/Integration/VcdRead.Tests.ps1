@@ -23,8 +23,8 @@ Invoke-TestCase -Name 'Read-only VCD snapshot uses versions session firewall gro
         Assert-Equal 1 $out.FirewallRuleCount
         Assert-Equal 1 $out.IpSetCount
         Assert-Equal 1 $out.ReservationCount
-        Assert-Equal 6 $fake.Calls.Count
-        Assert-Equal 6 (@($fake.Calls | Where-Object {$_.Method -ceq 'GET'}).Count)
+        Assert-Equal 8 $fake.Calls.Count
+        Assert-Equal 8 (@($fake.Calls | Where-Object {$_.Method -ceq 'GET'}).Count)
         Assert-True ([IO.File]::Exists($out.SnapshotPath))
         $snapshot = [IO.File]::ReadAllText($out.SnapshotPath) | ConvertFrom-Json
         Assert-Equal 'App Servers' $snapshot.ipSetDetails[0].name

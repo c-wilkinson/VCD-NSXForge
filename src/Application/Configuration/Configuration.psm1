@@ -8,6 +8,13 @@ function Read-AppConfiguration {
     if (-not [IO.File]::Exists($path)) { throw "Configuration not found: $path" }
     $configuration = Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json
 
+    # Project configuration is distributable and must never become a secret store.
+    # Authentication mode is non-secret; actual material is accepted only at runtime.
+    $rawConfig = [IO.File]::ReadAllText($path)
+    if ($rawConfig -match '(?i)"(?:password|passwd|credential|credentials|bearerToken|accessToken|refreshToken|apiKey|secret|authorization)"\s*:') {
+        throw 'Application configuration contains a credential field. Supply secrets at runtime, never through JSON.'
+    }
+
     if ($configuration.schemaVersion -ne 1) { throw 'Unsupported configuration schema.' }
     if ($configuration.target.vcdVersion -ne '10.6' -or $configuration.target.networkBacking -ne 'NSX-T') {
         throw 'This project currently supports the VCD 10.6 / NSX-T target only.'

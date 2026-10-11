@@ -175,6 +175,10 @@ catch [System.OperationCanceledException] {
     throw
 }
 catch {
+    if ($Operation -eq 'VcdRead') {
+        Write-AppLog -Logger $Logger -Component 'VcdRead' -Level 'ERROR' -OperationId $OperationId -Message 'VCD read failed; details withheld to avoid leaking server or credential material.'
+        throw 'VCD read failed or was denied; consult the safe diagnostic status.'
+    }
     Write-AppLog -Logger $Logger -Component 'DemoOperation' -Level 'ERROR' -OperationId $OperationId -Message ("Failed {0}: {1}" -f $Operation, $_.Exception.Message)
     throw
 }

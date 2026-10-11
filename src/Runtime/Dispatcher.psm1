@@ -151,6 +151,9 @@ function Receive-DispatcherEvents {
             $job.Cancellation.Dispose()
             $Dispatcher.Jobs.RemoveAt($index)
         }
+        if ($outcome -eq 'Failed' -and $job.Name -eq 'VcdRead') {
+            $message = 'VCD operation failed or access was denied. No credentials or server response details were recorded.'
+        }
         $terminals.Add([pscustomobject]@{
             Type = $outcome
             OperationId = $job.Id

@@ -32,6 +32,44 @@ function Start-AppLogger {
     }
 }
 
+function Protect-AppLogText {
+    [CmdletBinding()]
+    param([AllowEmptyString()][string]$Text)
+    if ($null -eq $Text) { return '' }
+    # Defence in depth only. Do not pass untrusted request/response bodies to logs.
+    $safe = [regex]::Replace($Text, '(?i)\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+', '$1 [REDACTED]')
+    $safe = [regex]::Replace($safe, '(?i)\b(password|passwd|access[_-]?token|refresh[_-]?token|api[_-]?key|secret|authorization|x-vmware-vcloud-access-token)\b(\s*[=:]\s*|["'']\s*:\s*["''])[^\s,;"''}]+', '$1=[REDACTED]')
+    return $safe
+}
+
+function Protect-AppLogProperties {
+    param([hashtable]$Values)
+    $safe = @{}
+    foreach ($key in $Values.Keys) {
+        $name = [string]$key
+        if ($name -match '(?i)password|token|credential|secret|authorization|api.?key|cookie|header') {
+            $safe[$name] = '[REDACTED]'
+        }
+        elseif ($Values[$key] -is [pscredential] -or $Values[$key] -is [securestring]) {
+            $safe[$name] = '[REDACTED]'
+        }
+        elseif ($Values[$key] -is [hashtable]) {
+            $safe[$name] = Protect-AppLogProperties -Values $Values[$key]
+        }
+        elseif ($Values[$key] -is [string]) {
+            $safe[$name] = Protect-AppLogText -Text ([string]$Values[$key])
+        }
+        elseif ($null -eq $Values[$key] -or $Values[$key] -is [ValueType]) {
+            $safe[$name] = $Values[$key]
+        }
+        else {
+            # Object graphs may contain non-obvious private fields. Do not serialize them.
+            $safe[$name] = '[OBJECT OMITTED]'
+        }
+    }
+    return $safe
+}
+
 function Write-AppLog {
     [CmdletBinding()]
     param(
@@ -48,10 +86,10 @@ function Write-AppLog {
     $record = [ordered]@{
         timestamp = [DateTimeOffset]::UtcNow.ToString('o')
         level = $Level
-        component = $Component
-        operationId = $OperationId
-        message = $Message
-        properties = $Properties
+        component = Protect-AppLogText -Text $Component
+        operationId = Protect-AppLogText -Text $OperationId
+        message = Protect-AppLogText -Text $Message
+        properties = Protect-AppLogProperties -Values $Properties
     }
     $Logger.Queue.Enqueue($record)
     $Logger.Signal.Set()
@@ -76,4 +114,4 @@ function Stop-AppLogger {
     }
 }
 
-Export-ModuleMember -Function Start-AppLogger, Write-AppLog, Stop-AppLogger
+Export-ModuleMember -Function Start-AppLogger, Write-AppLog, Stop-AppLogger, Protect-AppLogText

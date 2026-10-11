@@ -26,6 +26,9 @@ public sealed class VcdMockHttpHandler : HttpMessageHandler {
         if (Mode == "Redirect") {
             response = new HttpResponseMessage(HttpStatusCode.Redirect);
             response.Headers.Location = new Uri("https://other.example.test/stolen");
+        } else if (Mode == "Unauthorized" || Mode == "Forbidden") {
+            response = new HttpResponseMessage(Mode == "Unauthorized" ? HttpStatusCode.Unauthorized : HttpStatusCode.Forbidden);
+            response.Content = new StringContent("Bearer confidential-never-echo");
         } else if (Mode == "Error") {
             response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
             response.Content = new StringContent("sensitive server data should not be surfaced");

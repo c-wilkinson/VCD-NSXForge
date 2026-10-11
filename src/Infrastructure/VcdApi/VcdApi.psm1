@@ -149,6 +149,21 @@ function Invoke-VcdPagedRead {
     throw 'VCD paging exceeded the 10000-page safety limit.'
 }
 
+# Resolve server-owned resource metadata before a live operation uses caller-provided IDs.
+function Get-VcdGatewayOwnership {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Client, [Parameter(Mandatory)][string]$GatewayId,
+          [System.Threading.CancellationToken]$CancellationToken = [System.Threading.CancellationToken]::None)
+    Invoke-VcdRead -Client $Client -Path ('/cloudapi/1.0.0/edgeGateways/' + [uri]::EscapeDataString($GatewayId)) -CancellationToken $CancellationToken
+}
+
+function Get-VcdNetworkOwnership {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Client, [Parameter(Mandatory)][string]$NetworkId,
+          [System.Threading.CancellationToken]$CancellationToken = [System.Threading.CancellationToken]::None)
+    Invoke-VcdRead -Client $Client -Path ('/cloudapi/1.0.0/orgVdcNetworks/' + [uri]::EscapeDataString($NetworkId)) -CancellationToken $CancellationToken
+}
+
 function Get-VcdFirewallGroupDetails {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Client, [Parameter(Mandatory)][string]$GroupId, [System.Threading.CancellationToken]$CancellationToken = [System.Threading.CancellationToken]::None)
@@ -170,4 +185,4 @@ function Get-VcdManualIpReservations {
     Invoke-VcdPagedRead -Client $Client -ResourcePath '/cloudapi/1.0.0/manualIpReservations' -Filter "(networkRef.id==$NetworkId)" -CancellationToken $CancellationToken
 }
 
-Export-ModuleMember -Function New-VcdApiClient, Invoke-VcdRead, Get-VcdApiVersions, Get-VcdEdgeFirewallRules, Get-VcdFirewallGroupDetails, Invoke-VcdPagedRead, Get-VcdFirewallGroups, Get-VcdManualIpReservations
+Export-ModuleMember -Function New-VcdApiClient, Invoke-VcdRead, Get-VcdApiVersions, Get-VcdEdgeFirewallRules, Get-VcdFirewallGroupDetails, Invoke-VcdPagedRead, Get-VcdFirewallGroups, Get-VcdManualIpReservations, Get-VcdGatewayOwnership, Get-VcdNetworkOwnership

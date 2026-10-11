@@ -223,7 +223,7 @@ Invoke-TestCase -Name 'VCD 10.6 advanced snapshot saves a separate v3 policy but
         Assert-Equal 2 $v3.Document.sections.userDefinedRules.Count
         Assert-Equal 'SQL-TCP-1433' $v3.Document.sections.userDefinedRules[0].applicationPortProfiles[0].name
         Assert-Equal 1 (@(Get-ChildItem (Join-Path $root 'reports') -Filter 'vcd-snapshot-*.json').Count)
-        Assert-Equal 6 $fake.Calls.Count
+        Assert-Equal 8 $fake.Calls.Count
     }
     finally { if ([IO.Directory]::Exists($root)) { [IO.Directory]::Delete($root,$true) } }
 }
@@ -244,7 +244,7 @@ Invoke-TestCase -Name 'VCD 10.6 policy-only import succeeds safely with advanced
         $v3 = Read-VcdPolicyObserved -StateRoot (Join-Path $root 'state') -Environment env01 -Scope edge01
         Assert-Equal 2 $v3.Document.sections.userDefinedRules.Count
         Assert-True (-not (Read-NetworkStateView -StateRoot (Join-Path $root 'state') -Environment env01 -Scope edge01 -View observed).Available)
-        Assert-Equal 6 $fake.Calls.Count
+        Assert-Equal 8 $fake.Calls.Count
     }
     finally { if ([IO.Directory]::Exists($root)) { [IO.Directory]::Delete($root,$true) } }
 }

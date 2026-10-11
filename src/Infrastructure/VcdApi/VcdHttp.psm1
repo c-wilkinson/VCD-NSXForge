@@ -15,6 +15,9 @@ function New-VcdHttpTransport {
         $BaseUri.AbsolutePath -cne '/' -or $BaseUri.Query -or $BaseUri.Fragment -or $BaseUri.UserInfo) {
         throw 'VCD transport requires an HTTPS origin with no credentials or path.'
     }
+    if ($TenantContextOrgId -and $TenantContextOrgId -cnotmatch '^urn:vcloud:org:[a-fA-F0-9-]{8,}$') {
+        throw 'Tenant context must be a VCD organisation URN.'
+    }
     if ($null -eq $Handler) {
         $Handler = [System.Net.Http.HttpClientHandler]::new()
         $Handler.AllowAutoRedirect = $false
@@ -34,9 +37,17 @@ function New-VcdHttpTransport {
             -not ($uri.AbsolutePath.StartsWith('/api/') -or $uri.AbsolutePath.StartsWith('/cloudapi/'))) {
             throw 'VCD read request attempted to leave the configured API origin or path.'
         }
+        if ($uri.AbsolutePath.StartsWith('/cloudapi/') -and -not $state.Token) {
+            throw 'VCD read denied: no active authenticated session token.'
+        }
         $req = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Get, $uri)
         try {
-            foreach ($key in $call.Headers.Keys) { [void]$req.Headers.TryAddWithoutValidation($key, [string]$call.Headers[$key]) }
+            foreach ($key in $call.Headers.Keys) {
+                if ([string]$key -cne 'Accept' -or [string]$call.Headers[$key] -notmatch '^application/(json;version=[0-9]+\.[0-9]+|\*\+xml)$') {
+                    throw 'VCD request rejected: only a version-pinned Accept header may be supplied.'
+                }
+                [void]$req.Headers.TryAddWithoutValidation('Accept', [string]$call.Headers[$key])
+            }
             if ($state.Token) {
                 $req.Headers.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $state.Token)
             }
@@ -44,7 +55,11 @@ function New-VcdHttpTransport {
             $ct = if ($call.PSObject.Properties.Name -contains 'CancellationToken') { $call.CancellationToken } else { [System.Threading.CancellationToken]::None }
             $response = $state.Http.SendAsync($req, $ct).GetAwaiter().GetResult()
             try {
-                if (-not $response.IsSuccessStatusCode) { throw "VCD GET failed: HTTP $([int]$response.StatusCode) $($response.ReasonPhrase)." }
+                if (-not $response.IsSuccessStatusCode) {
+                    if ([int]$response.StatusCode -in @(401,403)) { $state.Token = '' }
+                    # Response bodies, reason phrases and server headers are untrusted.
+                    throw "VCD GET failed: HTTP $([int]$response.StatusCode)."
+                }
                 $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
                 if ($uri.AbsolutePath -eq '/api/versions') { return $body }
                 if ([string]::IsNullOrWhiteSpace($body)) { throw 'VCD returned an empty JSON response.' }
@@ -66,8 +81,13 @@ function Connect-VcdHttpTransport {
           [switch]$ProviderLogin,
           [System.Threading.CancellationToken]$CancellationToken = [System.Threading.CancellationToken]::None)
     $CancellationToken.ThrowIfCancellationRequested()
+    # A failed reauthentication attempt must never retain a prior token.
+    $Transport.InternalState.Token = ''
     if ($PSCmdlet.ParameterSetName -eq 'BearerToken') {
         if ([string]::IsNullOrWhiteSpace($BearerToken)) { throw 'Bearer token must not be blank.' }
+        if ($Transport.InternalState.AllowLoopbackHttp -and $BearerToken -cne 'simulator-read-only') {
+            throw 'Only the built-in synthetic token is accepted by the loopback simulator transport.'
+        }
         $Transport.InternalState.Token = $BearerToken
         return
     }

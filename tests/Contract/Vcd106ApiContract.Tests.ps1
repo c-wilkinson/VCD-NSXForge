@@ -220,7 +220,7 @@ Invoke-TestCase -Name '10.6 failed observed import preserves sentinel and saves 
         } 'Unsupported live firewall payload must never replace observed state'
         Assert-Equal 'unmodified' ([IO.File]::ReadAllText((Join-Path $observed 'sentinel.txt')))
         Assert-Equal 1 (@(Get-ChildItem -LiteralPath (Join-Path $tmp 'reports') -Filter 'vcd-snapshot-*.json').Count)
-        Assert-Equal 6 $fake.Calls.Count
+        Assert-Equal 8 $fake.Calls.Count
     }
     finally { if ([IO.Directory]::Exists($tmp)) { [IO.Directory]::Delete($tmp, $true) } }
 }
@@ -430,6 +430,7 @@ Invoke-TestCase -Name '10.6 HTTP adapter rejects 401 403 429 500 503 504 without
         $fake.Payload = 'secret internal diagnostic content'
         $transport = New-VcdHttpTransport -BaseUri ([uri]'https://vcd.example.test:8443') -Handler $fake
         try {
+            Connect-VcdHttpTransport -Transport $transport -BearerToken 'synthetic-test-token'
             $failure = ''
             try { $null = & $transport.RequestSender ([pscustomobject]@{Method='GET';Uri='https://vcd.example.test:8443/cloudapi/1.0.0/sessions/current';Headers=@{Accept='application/json;version=39.0'}}) }
             catch { $failure = $_.Exception.Message }
@@ -446,6 +447,7 @@ Invoke-TestCase -Name '10.6 HTTP adapter refuses redirect and does not request r
     $fake.StatusCode = 302
     $transport = New-VcdHttpTransport -BaseUri ([uri]'https://vcd.example.test:8443') -Handler $fake
     try {
+        Connect-VcdHttpTransport -Transport $transport -BearerToken 'synthetic-test-token'
         Assert-Vcd106Throws { & $transport.RequestSender ([pscustomobject]@{Method='GET';Uri='https://vcd.example.test:8443/cloudapi/1.0.0/sessions/current';Headers=@{Accept='application/json;version=39.0'}}) }
         Assert-Equal 1 $fake.Count
     }
@@ -458,6 +460,7 @@ Invoke-TestCase -Name '10.6 HTTP adapter rejects malformed and empty JSON payloa
         $fake.Payload = $payload
         $transport = New-VcdHttpTransport -BaseUri ([uri]'https://vcd.example.test:8443') -Handler $fake
         try {
+            Connect-VcdHttpTransport -Transport $transport -BearerToken 'synthetic-test-token'
             Assert-Vcd106Throws { & $transport.RequestSender ([pscustomobject]@{Method='GET';Uri='https://vcd.example.test:8443/cloudapi/1.0.0/sessions/current';Headers=@{Accept='application/json;version=39.0'}}) }
             Assert-Equal 1 $fake.Count
         }
