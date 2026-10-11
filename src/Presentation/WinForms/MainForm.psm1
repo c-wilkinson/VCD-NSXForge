@@ -4,6 +4,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Import-Module (Join-Path $PSScriptRoot '..\Controllers\UiState.psm1') -ErrorAction Stop
 Import-Module (Join-Path $PSScriptRoot 'NetworkEditorForm.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'VcdDiscoveryForm.psm1') -ErrorAction Stop
 
 function Set-NetworkDashboardBusyState {
     [CmdletBinding()]
@@ -11,6 +12,7 @@ function Set-NetworkDashboardBusyState {
         [Parameter(Mandatory)][hashtable]$Navigation,
         [Parameter(Mandatory)][object[]]$ActionSpecs,
         [Parameter(Mandatory)][System.Windows.Forms.Button]$ConnectionTest,
+        [System.Windows.Forms.Button]$DiscoveryButton,
         [Parameter(Mandatory)][System.Windows.Forms.Button]$CancelButton,
         [bool]$Busy,
         [bool]$Closing,
@@ -20,6 +22,7 @@ function Set-NetworkDashboardBusyState {
         $Navigation[$spec.Name].Enabled = (-not $Busy -and -not $Closing -and (-not $spec.Simulator -or $IsSimulator))
     }
     $ConnectionTest.Enabled = (-not $Busy -and -not $Closing)
+    if ($null -ne $DiscoveryButton) { $DiscoveryButton.Enabled = (-not $Busy -and -not $Closing) }
     $CancelButton.Enabled = ($Busy -and -not $Closing)
     $CancelButton.Text = if ($Busy -and -not $Closing) { 'Cancel operation' } else { 'No active operation' }
 }
@@ -122,12 +125,22 @@ function New-NetworkManagerForm {
     $connectionInfo.Controls.Add($gatewayLabel, 0, 2)
     $connectionTestPanel = [System.Windows.Forms.Panel]::new()
     $connectionTestPanel.Dock = 'Fill'
-    $connectionTestPanel.Padding = [System.Windows.Forms.Padding]::new(5, 37, 15, 30)
+    $connectionTestPanel.Padding = [System.Windows.Forms.Padding]::new(5, 12, 15, 10)
     $connectionTest = [System.Windows.Forms.Button]::new()
     $connectionTest.Name = 'TestConnectionButton'; $connectionTest.Text = 'Test connection'
     $connectionTest.Dock = 'Fill'
     $connectionTest.AccessibleName = 'Test VMware Cloud Director API connection'
-    $connectionTestPanel.Controls.Add($connectionTest)
+    $connectionActions = [System.Windows.Forms.TableLayoutPanel]::new()
+    $connectionActions.Dock='Fill'; $connectionActions.RowCount=2; $connectionActions.ColumnCount=1
+    [void]$connectionActions.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Percent, 50))
+    [void]$connectionActions.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Percent, 50))
+    $discoverButton = [System.Windows.Forms.Button]::new()
+    $discoverButton.Name = 'DiscoverVcdButton'; $discoverButton.Text = 'Browse infrastructure'
+    $discoverButton.AccessibleName = 'Discover VCD organisations VDCs Edge Gateways and networks'
+    $discoverButton.Dock='Fill';$discoverButton.Enabled=$true
+    $connectionActions.Controls.Add($connectionTest,0,0)
+    $connectionActions.Controls.Add($discoverButton,0,1)
+    $connectionTestPanel.Controls.Add($connectionActions)
     $connection.Controls.Add($connectionInfo, 0, 0)
     $connection.Controls.Add($connectionTestPanel, 1, 0)
     $root.Controls.Add($connection, 0, 1)
@@ -253,10 +266,13 @@ function New-NetworkManagerForm {
         UpdateState   = Get-Command -Name 'Update-UiOperationState' -ErrorAction Stop
         EditorForm    = Get-Command -Name 'New-NetworkEditorForm' -ErrorAction Stop
         SetBusy       = Get-Command -Name 'Set-NetworkDashboardBusyState' -ErrorAction Stop
+        DiscoveryForm = Get-Command -Name 'New-VcdDiscoverySelectionForm' -ErrorAction Stop
     }
     $ui = New-UiOperationState
     $ui | Add-Member -NotePropertyName Closing -NotePropertyValue $false
     $ui | Add-Member -NotePropertyName Ticks -NotePropertyValue 0
+    # Selected IDs are transient: do not modify config/application.json.
+    $selectedTarget = @{ GatewayId = ''; NetworkIds = @(); OrgId = ''; VdcId = '' }
 
     $logEvent = {
         param([string]$text)
@@ -267,7 +283,7 @@ function New-NetworkManagerForm {
     $setBusy = {
         param([bool]$busy)
         & $commands.SetBusy -Navigation $navigation -ActionSpecs $specs `
-            -ConnectionTest $connectionTest -CancelButton $cancel -Busy $busy `
+            -ConnectionTest $connectionTest -DiscoveryButton $discoverButton -CancelButton $cancel -Busy $busy `
             -Closing ([bool]$ui.Closing) -IsSimulator $isSimulator
     }.GetNewClosure()
 
@@ -297,9 +313,10 @@ function New-NetworkManagerForm {
     }.GetNewClosure()
 
     $startVcdRead = {
-        param([bool]$connectionOnly)
+        param([bool]$connectionOnly, [bool]$discoverOnly = $false)
         if ($ui.ActiveOperationId -or $ui.Closing) { return }
-        if (-not $Configuration.vcd.apiUrl -or (-not $connectionOnly -and -not $Configuration.vcd.gatewayId)) {
+        $currentGatewayId = if ($selectedTarget.GatewayId) { $selectedTarget.GatewayId } else { [string]$Configuration.vcd.gatewayId }
+        if (-not $Configuration.vcd.apiUrl -or (-not $connectionOnly -and -not $discoverOnly -and -not $currentGatewayId)) {
             $status.Text = 'Configure vcd.apiUrl (and a gateway for snapshots) in config/application.json, then restart.'
             & $logEvent 'API endpoint or gateway is not configured; no connection attempted.'
             return
@@ -313,10 +330,21 @@ function New-NetworkManagerForm {
             $credential = Get-Credential -Message 'Read-only VMware Cloud Director authentication'
             if ($null -eq $credential) { return }
         }
+        # Clone the non-secret settings, inserting runtime IDs only. The selected
+        # target is never written to the application's configuration file.
+        $vcdSettings = [pscustomobject]@{}
+        foreach ($property in $Configuration.vcd.PSObject.Properties) {
+            $vcdSettings | Add-Member -NotePropertyName $property.Name -NotePropertyValue $property.Value
+        }
+        if ($selectedTarget.GatewayId -and -not $discoverOnly) {
+            $vcdSettings.gatewayId = $selectedTarget.GatewayId
+            $vcdSettings.networkIds = @($selectedTarget.NetworkIds)
+        }
         $args = @{
-            VcdConfiguration = $Configuration.vcd
+            VcdConfiguration = $vcdSettings
             OutputDirectory = (Join-Path $Configuration.ApplicationRoot $Configuration.state.reportsDirectory)
             ConnectionOnly = $connectionOnly
+            DiscoverOnly = $discoverOnly
         }
         if (-not $isSimulator) { $args.Credential = $credential }
         & $startOperation 'VcdRead' $args
@@ -354,6 +382,7 @@ function New-NetworkManagerForm {
     }
     $navigation['ReadVcdButton'].Add_Click({ & $startVcdRead $false }.GetNewClosure())
     $connectionTest.Add_Click({ & $startVcdRead $true }.GetNewClosure())
+    $discoverButton.Add_Click({ & $startVcdRead $false $true }.GetNewClosure())
     $cancel.Add_Click({
         if ($ui.ActiveOperationId) {
             & $commands.CancelWorker -Dispatcher $Dispatcher -OperationId $ui.ActiveOperationId
@@ -377,7 +406,24 @@ function New-NetworkManagerForm {
             if (-not (& $commands.UpdateState -State $ui -Event $item)) { continue }
             $status.Text = $ui.Message
             $progress.Value = $ui.Percent
-            if ($item.Type -in @('PlanSummary','VcdSummary')) {
+            if ($item.Type -eq 'VcdDiscovery') {
+                & $logEvent $item.Message
+                $dialog = $null
+                try {
+                    $dialog = & $commands.DiscoveryForm -Inventory $item.Payload
+                    if ($dialog.Form.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {
+                        $selectedTarget.GatewayId = $dialog.Selection.GatewayId
+                        $selectedTarget.NetworkIds = @($dialog.Selection.NetworkIds)
+                        $selectedTarget.OrgId = $dialog.Selection.OrgId
+                        $selectedTarget.VdcId = $dialog.Selection.VdcId
+                        $gatewayLabel.Text = ('Selected gateway: {0}; networks: {1}' -f $selectedTarget.GatewayId, @($selectedTarget.NetworkIds).Count)
+                        & $logEvent ('Target selected (read only): ' + $selectedTarget.GatewayId)
+                    }
+                }
+                catch { $status.Text = 'Unable to display discovery selection'; & $logEvent 'Unable to display discovery selection.' }
+                finally { if ($null -ne $dialog) { $dialog.Form.Dispose() } }
+            }
+            elseif ($item.Type -in @('PlanSummary','VcdSummary')) {
                 & $logEvent ($item.Type + ': ' + $item.Message)
             }
             elseif ($item.Type -eq 'Progress') { & $logEvent ('PROGRESS: ' + $item.Message) }

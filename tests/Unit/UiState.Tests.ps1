@@ -65,3 +65,14 @@ Invoke-TestCase -Name 'UI state accepts read-only VCD summary for the active ope
     Assert-Equal 'VCD connection OK' $state.Message
     Assert-True (-not (Update-UiOperationState -State $state -Event ([pscustomobject]@{Type='VcdSummary';OperationId='old';Message='stale';Percent=1})))
 }
+
+Invoke-TestCase -Name 'UI applies only current discovery events and ignores stale or cancelled discovery' -Body {
+    $state=New-UiOperationState
+    Set-UiOperationStarted -State $state -OperationId 'discovery-1'
+    $evt=[pscustomobject]@{Type='VcdDiscovery';OperationId='discovery-1';Message='Scope inventory available';Percent=95}
+    Assert-True (Update-UiOperationState -State $state -Event $evt)
+    Assert-Equal 'Scope inventory available' $state.Message
+    Assert-True (-not (Update-UiOperationState -State $state -Event ([pscustomobject]@{Type='VcdDiscovery';OperationId='old';Message='stale';Percent=1})))
+    $null=Set-UiCancellationRequested -State $state
+    Assert-True (-not (Update-UiOperationState -State $state -Event $evt))
+}

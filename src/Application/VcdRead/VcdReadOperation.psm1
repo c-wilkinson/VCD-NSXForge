@@ -2,6 +2,7 @@ Set-StrictMode -Version Latest
 Import-Module (Join-Path $PSScriptRoot '..\..\Infrastructure\VcdApi\VcdApi.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot '..\..\Infrastructure\VcdApi\VcdHttp.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'VcdSnapshot.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'VcdDiscovery.psm1') -ErrorAction Stop
 # Explicit imports are required: a dependency imported privately by VcdSnapshot
 # is not automatically exported into this module's command resolution scope.
 Import-Module (Join-Path $PSScriptRoot '..\..\Domain\State\VcdPolicyModel.psm1') -ErrorAction Stop
@@ -24,6 +25,7 @@ function Invoke-VcdReadOperation {
         [string]$Environment,
         [string]$Scope,
         [switch]$ConnectionOnly,
+        [switch]$DiscoverOnly,
         [System.Threading.CancellationToken]$CancellationToken = [System.Threading.CancellationToken]::None
     )
     if ($null -ne $RequestSender -and $null -ne $HttpHandler) { throw 'Choose either an injected sender or an HTTP handler.' }
@@ -40,8 +42,9 @@ function Invoke-VcdReadOperation {
     }
     if (($WriteObserved -or $WritePolicyObserved) -and (-not $StateRoot -or -not $Environment -or -not $Scope)) { throw 'StateRoot, Environment and Scope are required for observed-state import.' }
     if (($WriteObserved -or $WritePolicyObserved) -and @($VcdConfiguration.networkIds).Count -eq 0) { throw 'Observed-state import requires one or more explicit network URNs; an unqueried reservation scope cannot be treated as empty.' }
+    if ($DiscoverOnly -and ($ConnectionOnly -or $WriteObserved -or $WritePolicyObserved)) { throw 'Discovery cannot be combined with connection-only or observed-state import.' }
     if ($ConnectionOnly -and ($WriteObserved -or $WritePolicyObserved)) { throw 'Connection-only cannot publish observed state.' }
-    if (-not $ConnectionOnly -and (-not $VcdConfiguration.gatewayId)) { throw 'Set vcd.gatewayId to an Edge Gateway URN before retrieving a snapshot.' }
+    if (-not $ConnectionOnly -and -not $DiscoverOnly -and (-not $VcdConfiguration.gatewayId)) { throw 'Set vcd.gatewayId to an Edge Gateway URN before retrieving a snapshot.' }
     $transport = $null
     try {
         $CancellationToken.ThrowIfCancellationRequested()
@@ -96,6 +99,15 @@ function Invoke-VcdReadOperation {
                 $identityLabel = if ($null -ne $identity) { $identity.User + ' (' + $identity.TargetOrgId + ')' } else { 'Synthetic simulator identity' }
                 if ($ConnectionOnly) {
                     return [pscustomobject]@{ Connected=$true; ApiVersion=$client.ApiVersion; SnapshotPath=''; ObservedImported=$false; IdentityLabel=$identityLabel }
+                }
+                if ($DiscoverOnly) {
+                    $discoverIdentity = if ($simulatorMode) {
+                        [pscustomobject]@{ SessionId=[string]$session.id; TargetOrgId=[string]$session.orgRef.id }
+                    } else { $identity }
+                    $inventory = Get-VcdDiscoveryInventory -Client $client -Identity $discoverIdentity -CancellationToken $CancellationToken
+                    $CancellationToken.ThrowIfCancellationRequested()
+                    Confirm-VcdArtifactContainsNoSecrets -Value $inventory
+                    return [pscustomobject]@{ Connected=$true; Discovered=$true; ApiVersion=$client.ApiVersion; IdentityLabel=$identityLabel; Inventory=$inventory; SnapshotPath=''; ObservedImported=$false }
                 }
                 if (-not $simulatorMode) {
                     # Renewed credentials never skip the original resource ownership check.

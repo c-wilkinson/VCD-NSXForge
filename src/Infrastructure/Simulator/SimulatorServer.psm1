@@ -85,8 +85,42 @@ function Invoke-SimulatorRoute {
         }
         catch { return New-SimulatorResult -StatusCode 404 -Body @{error='Unknown synthetic gateway'} }
     }
+    # API 39.0 discovery fixtures are synthetic, GET-only and tenant-scoped.
+    # Model one synthetic organisation and one VDC per domain/tier so engineers
+    # can exercise the same hierarchy used by real VCD clients.
+    if ($Path -cin @('/cloudapi/1.0.0/orgs','/cloudapi/1.0.0/vdcs','/cloudapi/1.0.0/edgeGateways','/cloudapi/1.0.0/orgVdcNetworks')) {
+        $org = 'urn:vcloud:org:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+        $orgRef = [pscustomobject]@{ id = $org; name = 'Synthetic organisation' }
+        $items = @()
+        switch ($Path) {
+            '/cloudapi/1.0.0/orgs' { $items = @([pscustomobject]@{id=$org;name='Synthetic organisation'}) }
+            '/cloudapi/1.0.0/vdcs' {
+                $items = @($Dataset.gateways | ForEach-Object {
+                    [pscustomobject]@{id=('urn:vcloud:vdc:{0}' -f $_.gatewayId.Substring($_.gatewayId.LastIndexOf(':')+1));name=('{0} Tier {1}' -f $_.domain,$_.tier);org=$orgRef}
+                })
+            }
+            '/cloudapi/1.0.0/edgeGateways' {
+                $items = @($Dataset.gateways | ForEach-Object {
+                    [pscustomobject]@{id=$_.gatewayId;name=$_.name;orgRef=$orgRef;orgVdc=[pscustomobject]@{id=('urn:vcloud:vdc:{0}' -f $_.gatewayId.Substring($_.gatewayId.LastIndexOf(':')+1))}}
+                })
+            }
+            '/cloudapi/1.0.0/orgVdcNetworks' {
+                $items = @($Dataset.gateways | ForEach-Object {
+                    [pscustomobject]@{id=$_.networkId;name=($_.name+' network');networkType='NAT_ROUTED';orgRef=$orgRef;orgVdc=[pscustomobject]@{id=('urn:vcloud:vdc:{0}' -f $_.gatewayId.Substring($_.gatewayId.LastIndexOf(':')+1))};connection=[pscustomobject]@{routerRef=[pscustomobject]@{id=$_.gatewayId}}}
+                })
+            }
+        }
+        $page=1;$pageSize=25
+        if ($Query.ContainsKey('page') -and -not [int]::TryParse([string]$Query.page,[ref]$page)) { return New-SimulatorResult -StatusCode 400 -Body @{error='Invalid discovery page'} }
+        if ($Query.ContainsKey('pageSize') -and -not [int]::TryParse([string]$Query.pageSize,[ref]$pageSize)) { return New-SimulatorResult -StatusCode 400 -Body @{error='Invalid discovery page size'} }
+        $limit = if ($Path -eq '/cloudapi/1.0.0/orgVdcNetworks') { 32 } else { 128 }
+        if ($pageSize -gt $limit) { return New-SimulatorResult -StatusCode 400 -Body @{error='Discovery page size too large'} }
+        $result = Get-SimulatorPage -Items $items -Page $page -PageSize $pageSize
+        if ($null -eq $result) { return New-SimulatorResult -StatusCode 400 -Body @{error='Invalid discovery pagination'} }
+        return New-SimulatorResult -Body $result
+    }
     if ($Path -ceq '/cloudapi/1.0.0/sessions/current') {
-        return New-SimulatorResult -Body @{id='urn:vcloud:session:simulator';user='simulator@local';org='simulator';synthetic=$true}
+        return New-SimulatorResult -Body @{id='urn:vcloud:session:simulator';user='simulator@local';org='simulator';orgRef=[pscustomobject]@{id='urn:vcloud:org:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'};synthetic=$true}
     }
     if ($Path -cmatch '^/cloudapi/2\.0\.0/edgeGateways/([^/]+)/firewall/rules$') {
         $id = [uri]::UnescapeDataString($matches[1]); $gateway = @($Dataset.gateways | Where-Object { $_.gatewayId -ceq $id })

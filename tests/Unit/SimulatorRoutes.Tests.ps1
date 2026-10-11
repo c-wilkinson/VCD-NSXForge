@@ -88,3 +88,17 @@ Invoke-TestCase -Name 'Simulator debug endpoints explain authentication and mana
     $invalid = Invoke-SimulatorRoute -Dataset $data -Method GET -Path '/__simulator/v1/access' -Query @{sourceDomain='DomainZ';sourceTier='0';targetDomain='DomainB';targetTier='1'}
     Assert-Equal 400 $invalid.StatusCode
 }
+
+Invoke-TestCase -Name 'Simulator implements API 39.0 organisation VDC gateway and network discovery as read-only pages' -Body {
+    $data = Import-SimulatorTopology -Path $simulatorFixture
+    foreach ($kind in @('orgs','vdcs','edgeGateways','orgVdcNetworks')) {
+        $result = Invoke-SimulatorRoute -Dataset $data -Method GET -Path ('/cloudapi/1.0.0/' + $kind) -Query @{page='1';pageSize='2'} -Authorization 'Bearer simulator-read-only'
+        Assert-Equal 200 $result.StatusCode
+        Assert-Equal ([Math]::Min(2, [int]$result.Body.resultTotal)) @($result.Body.values).Count
+        Assert-True ($result.Body.resultTotal -gt 0)
+        $denied=Invoke-SimulatorRoute -Dataset $data -Method PATCH -Path ('/cloudapi/1.0.0/' + $kind) -Authorization 'Bearer simulator-read-only'
+        Assert-Equal 405 $denied.StatusCode
+    }
+    $networks=Invoke-SimulatorRoute -Dataset $data -Method GET -Path '/cloudapi/1.0.0/orgVdcNetworks' -Query @{page='1';pageSize='33'} -Authorization 'Bearer simulator-read-only'
+    Assert-Equal 400 $networks.StatusCode
+}

@@ -69,7 +69,7 @@ function Invoke-VcdPagedRead {
     param(
         [Parameter(Mandatory)]$Client,
         [Parameter(Mandatory)][string]$ResourcePath,
-        [Parameter(Mandatory)][string]$Filter,
+        [AllowEmptyString()][string]$Filter = '',
         [ValidateRange(1,128)][int]$PageSize = 100,
         [System.Threading.CancellationToken]$CancellationToken = [System.Threading.CancellationToken]::None
     )
@@ -79,7 +79,7 @@ function Invoke-VcdPagedRead {
     $expectedTotal = $null
     for ($page = 1; $page -le 10000; $page++) {
         $CancellationToken.ThrowIfCancellationRequested()
-        $query = '?filter={0}&page={1}&pageSize={2}' -f ([uri]::EscapeDataString($Filter)), $page, $PageSize
+        $query = if ([string]::IsNullOrEmpty($Filter)) { '?page={0}&pageSize={1}' -f $page, $PageSize } else { '?filter={0}&page={1}&pageSize={2}' -f ([uri]::EscapeDataString($Filter)), $page, $PageSize }
         $response = Invoke-VcdRead -Client $Client -Path ($ResourcePath + $query) -CancellationToken $CancellationToken
         if ($null -eq $response -or $null -eq $response.values) { throw 'VCD paging response is missing values.' }
         if ($null -eq $response.pageCount) { throw 'VCD paging response is missing pageCount.' }
@@ -119,6 +119,7 @@ function Invoke-VcdPagedRead {
             $expectedTotal = $total
         }
 
+        if ($response.values -isnot [array]) { throw 'VCD paging response values must be a JSON array.' }
         $items = @($response.values)
         if ($pages -eq 0) {
             if ($items.Count -ne 0 -or ($null -ne $expectedTotal -and $expectedTotal -ne 0)) {
@@ -185,4 +186,24 @@ function Get-VcdManualIpReservations {
     Invoke-VcdPagedRead -Client $Client -ResourcePath '/cloudapi/1.0.0/manualIpReservations' -Filter "(networkRef.id==$NetworkId)" -CancellationToken $CancellationToken
 }
 
-Export-ModuleMember -Function New-VcdApiClient, Invoke-VcdRead, Get-VcdApiVersions, Get-VcdEdgeFirewallRules, Get-VcdFirewallGroupDetails, Invoke-VcdPagedRead, Get-VcdFirewallGroups, Get-VcdManualIpReservations, Get-VcdGatewayOwnership, Get-VcdNetworkOwnership
+# The 10.6 OpenAPI inventory collections are GET-only. Networks have a
+# documented maximum page size of 32; the other collections allow up to 128.
+function Get-VcdDiscoveryCollection {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Client,
+          [Parameter(Mandatory)][ValidateSet('orgs','vdcs','edgeGateways','orgVdcNetworks')][string]$Kind,
+          [System.Threading.CancellationToken]$CancellationToken = [System.Threading.CancellationToken]::None)
+    $size = if ($Kind -eq 'orgVdcNetworks') { 32 } else { 100 }
+    $items = @(Invoke-VcdPagedRead -Client $Client -ResourcePath ('/cloudapi/1.0.0/' + $Kind) -PageSize $size -CancellationToken $CancellationToken)
+    foreach ($item in $items) {
+        if ($null -eq $item -or $null -eq $item.PSObject.Properties['id'] -or
+            [string]::IsNullOrWhiteSpace([string]$item.id) -or
+            $null -eq $item.PSObject.Properties['name'] -or
+            [string]::IsNullOrWhiteSpace([string]$item.name)) {
+            throw 'VCD discovery is incomplete: collection contains a resource without an ID or display name.'
+        }
+    }
+    return $items
+}
+
+Export-ModuleMember -Function New-VcdApiClient, Invoke-VcdRead, Get-VcdApiVersions, Get-VcdEdgeFirewallRules, Get-VcdFirewallGroupDetails, Invoke-VcdPagedRead, Get-VcdFirewallGroups, Get-VcdManualIpReservations, Get-VcdGatewayOwnership, Get-VcdNetworkOwnership, Get-VcdDiscoveryCollection

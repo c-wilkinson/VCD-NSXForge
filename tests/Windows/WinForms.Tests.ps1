@@ -7,6 +7,41 @@ if ($RunUiTests -and [Environment]::UserInteractive -and $PSVersionTable.PSEditi
     Import-Module (Join-Path $ProjectRoot 'src\Infrastructure\Logging\Logging.psm1') -Force
     Import-Module (Join-Path $ProjectRoot 'src\Runtime\Dispatcher.psm1') -Force
 
+    Invoke-TestCase -Name 'Read-only discovery dialog presents dropdowns, ID-backed selections and network checkboxes' -Body {
+        # The dialog is constructed entirely from a synthetic in-memory inventory.
+        Import-Module (Join-Path $ProjectRoot 'src\Presentation\WinForms\VcdDiscoveryForm.psm1') -ErrorAction Stop
+        $inventory=[pscustomobject]@{
+            Complete=$true;Visibility='PermissionScoped'
+            Organisations=@([pscustomobject]@{Id='org-1';Name='Tenant';Label='Tenant [org-1]'})
+            Vdcs=@([pscustomobject]@{Id='vdc-1';OrgId='org-1';Name='VDC';Label='VDC [vdc-1]'})
+            Gateways=@([pscustomobject]@{Id='gateway-1';OrgId='org-1';VdcId='vdc-1';Name='Edge';Label='Edge [gateway-1]'})
+            Networks=@([pscustomobject]@{Id='net-1';OrgId='org-1';VdcId='vdc-1';GatewayId='gateway-1';Name='APP';Label='APP [net-1]'})
+        }
+        $dialog=$null
+        try {
+            $dialog=New-VcdDiscoverySelectionForm -Inventory $inventory
+            $dialog.Form.Show()
+            [System.Windows.Forms.Application]::DoEvents()
+            foreach ($name in @('DiscoveryOrganisationCombo','DiscoveryVDCCombo','DiscoveryEdgeGatewayCombo','DiscoveryNetworksList','DiscoverySelectButton','DiscoveryCancelButton')) {
+                Assert-Equal 1 @($dialog.Form.Controls.Find($name,$true)).Count
+            }
+            $gateway=$dialog.Form.Controls.Find('DiscoveryEdgeGatewayCombo',$true)[0]
+            Assert-Equal 1 $gateway.Items.Count
+            Assert-True ($gateway.SelectedItem -match 'gateway-1')
+            $networks=$dialog.Form.Controls.Find('DiscoveryNetworksList',$true)[0]
+            Assert-Equal 1 $networks.CheckedItems.Count
+            Assert-True ($networks.CheckedItems[0] -match 'net-1')
+            $button=$dialog.Form.Controls.Find('DiscoverySelectButton',$true)[0]
+            Assert-True $button.Enabled
+            $button.PerformClick()
+            Assert-Equal 'gateway-1' $dialog.Selection.GatewayId
+            Assert-Equal 'net-1' $dialog.Selection.NetworkIds[0]
+        }
+        finally { if ($null -ne $dialog) { $dialog.Form.Dispose() } }
+        $bad=[pscustomobject]@{Complete=$false;Visibility='PermissionScoped'}
+        Assert-Throws { New-VcdDiscoverySelectionForm -Inventory $bad }
+    }
+
     Invoke-TestCase -Name 'Administrator dashboard provides real workflows, remains responsive and blocks live writes' -Body {
         $scratch = Join-Path ([IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString('n'))
         $logger = $null; $dispatcher = $null; $window = $null

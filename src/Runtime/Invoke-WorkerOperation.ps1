@@ -65,11 +65,22 @@ try {
                 OutputDirectory = [string]$Arguments.OutputDirectory
                 CancellationToken = $CancellationToken
                 ConnectionOnly = [bool]$Arguments.ConnectionOnly
+                DiscoverOnly = [bool]($Arguments.ContainsKey('DiscoverOnly') -and $Arguments.DiscoverOnly)
             }
             if ($Arguments.ContainsKey('Credential') -and $null -ne $Arguments.Credential) { $parameters.Credential = $Arguments.Credential }
             elseif ($Arguments.ContainsKey('BearerToken') -and $null -ne $Arguments.BearerToken) { $parameters.BearerToken = [string]$Arguments.BearerToken }
             # This operation is read-only; observed import is enabled only for explicit CLI use.
             $result = Invoke-VcdReadOperation @parameters
+            if ($result.PSObject.Properties.Name -contains 'Discovered' -and $result.Discovered) {
+                $inventory = $result.Inventory
+                $EventQueue.Enqueue([pscustomobject]@{
+                    Type = 'VcdDiscovery'; OperationId = $OperationId; Payload = $inventory
+                    Message = ('Read-only discovery complete: {0} VDCs, {1} gateways, {2} networks (permission scoped)' -f @($inventory.Vdcs).Count, @($inventory.Gateways).Count, @($inventory.Networks).Count)
+                    Percent = 95; WorkerThreadId = [Threading.Thread]::CurrentThread.ManagedThreadId
+                })
+                Send-WorkerProgress -Message 'Read-only VCD discovery complete; no configuration changed' -Percent 100
+                break
+            }
             # Read completed: a late cancel must not hide a snapshot already returned.
             Import-Module (Join-Path $ApplicationRoot 'src\Application\VcdRead\VcdReadSummary.psm1') -ErrorAction Stop
             $summary = New-VcdReadCompletionSummary -Result $result -ConnectionOnly:([bool]$Arguments.ConnectionOnly)
