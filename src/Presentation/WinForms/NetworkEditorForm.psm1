@@ -50,7 +50,7 @@ function New-NetworkEditorForm {
     $userTemplatePath=Join-Path $Configuration.ApplicationRoot 'templates\user-firewall-rules.json'
     $templates=@(& $commands.Templates -Path $templatePath -AdditionalPath $userTemplatePath)
     $dispatcher=New-WorkerDispatcher -ApplicationRoot $Configuration.ApplicationRoot -Logger $Logger -MaximumWorkers 2
-    $model=[pscustomobject]@{Scopes=@();GatewayId=[string]$Configuration.vcd.gatewayId;Baseline=$null;Documents=$null;CurrentList=@();Approved=$null;Active='';LastOperation='';Closing=$false;SuppressScopeChange=$false;PendingGateway='';Dirty=$false}
+    $model=[pscustomobject]@{Scopes=@();GatewayId=[string]$Configuration.vcd.gatewayId;Baseline=$null;Documents=$null;CurrentList=@();Approved=$null;Active='';LastOperation='';Closing=$false;SuppressScopeChange=$false;PendingGateway='';Dirty=$false;CancelRequested=$false}
     $form=[System.Windows.Forms.Form]::new();$form.Name='NetworkEditorForm';$form.Text='VCD-NSXForge | Synthetic Network Editor';$form.StartPosition='CenterParent'
     $form.ClientSize=[System.Drawing.Size]::new(1040,740);$form.MinimumSize=[System.Drawing.Size]::new(1020,670)
     $form.Font=[System.Drawing.Font]::new('Segoe UI',9)
@@ -140,7 +140,7 @@ function New-NetworkEditorForm {
     $initialPages = @{ edgeFirewallRules = $pages['edgeFirewallRules'].Page; ipSets = $pages['ipSets'].Page; manualIpReservations = $pages['manualIpReservations'].Page; plan = $planPage; traffic = $trafficPage }
     $tabs.SelectedTab = $initialPages[$InitialTab]
     $plan=[System.Windows.Forms.Button]::new();$plan.Name='GeneratePlanButton';$plan.Text='Generate plan';$plan.SetBounds(16,585,160,34);$plan.Anchor='Bottom,Left'
-    $cancel=[System.Windows.Forms.Button]::new();$cancel.Name='CancelEditorOperation';$cancel.Text='Cancel worker';$cancel.SetBounds(189,585,135,34);$cancel.Anchor='Bottom,Left'
+    $cancel=[System.Windows.Forms.Button]::new();$cancel.Name='CancelEditorOperation';$cancel.Text='Cancel worker';$cancel.SetBounds(189,585,135,34);$cancel.Anchor='Bottom,Left';$cancel.Enabled=$false
     $status=[System.Windows.Forms.Label]::new();$status.Name='EditorStatus';$status.SetBounds(350,585,670,50);$status.Anchor='Bottom,Left,Right';$status.Text='Loading synthetic scopes...'
     $report=[System.Windows.Forms.TextBox]::new();$report.Name='PlanSummaryText';$report.Multiline=$true;$report.ReadOnly=$true;$report.ScrollBars='Vertical';$report.SetBounds(16,638,1012,78);$report.Anchor='Bottom,Left,Right';$report.AccessibleName='Network editor notifications';$report.Text='Changes are drafts until you generate and explicitly apply a plan.'
     $form.Controls.AddRange([System.Windows.Forms.Control[]]@($scopeLabel,$scope,$actorLabel,$actor,$roleLabel,$refresh,$draft,$apply,$tabs,$plan,$cancel,$status,$report))
@@ -201,14 +201,21 @@ function New-NetworkEditorForm {
         param([string]$name,[hashtable]$parameters=@{})
         if ($model.Active -or $model.Closing) { return }
         try {
-            $parameters.ApiUrl=[string]$Configuration.vcd.apiUrl
+            if ($name -like 'Simulator*') { $parameters.ApiUrl=[string]$Configuration.vcd.apiUrl }
             $model.Active=& $commands.Start -Dispatcher $dispatcher -Operation $name -Arguments $parameters
+            $model.CancelRequested=$false
             $model.LastOperation=$name
+            $cancel.Enabled=$true
             $status.Text="Working on background runspace: $name"
             $refresh.Enabled=$false;$plan.Enabled=$false;$apply.Enabled=$false;$draft.Enabled=$false;$scope.Enabled=$false
             foreach ($resourceType in @('edgeFirewallRules','ipSets','manualIpReservations')) { foreach ($b in $pages[$resourceType].Buttons) { $b.Enabled=$false } }
         }
-        catch { $status.Text="Operation start failed: $($_.Exception.Message)" }
+        catch {
+            $status.Text="Operation start failed: $($_.Exception.Message)"
+            $model.Active=''
+            $cancel.Enabled=$false
+            if ($null -ne $model.Documents) { & $render }
+        }
     }.GetNewClosure()
 
     foreach ($kind in @('edgeFirewallRules','ipSets','manualIpReservations')) {
@@ -374,11 +381,12 @@ function New-NetworkEditorForm {
         $targetPort=if ([string]$protocol.SelectedItem -eq 'ICMP') { 0 } else { [int]$port.Value }
         & $start 'SimulatorTraffic' @{GatewayId=$model.GatewayId;SourceIp=$src.Text;DestinationIp=$dst.Text;Protocol=[string]$protocol.SelectedItem;DestinationPort=$targetPort}
     }.GetNewClosure())
-    $cancel.Add_Click({ if ($model.Active) { & $commands.Cancel -Dispatcher $dispatcher -OperationId $model.Active;$status.Text='Cancellation requested...' } }.GetNewClosure())
+    $cancel.Add_Click({ if ($model.Active -and -not $model.CancelRequested) { & $commands.Cancel -Dispatcher $dispatcher -OperationId $model.Active;$model.CancelRequested=$true;$cancel.Enabled=$false;$status.Text='Cancellation requested...' } }.GetNewClosure())
     $timer=[System.Windows.Forms.Timer]::new();$timer.Interval=100
     $timer.Add_Tick({
         foreach ($evt in @(& $commands.Events -Dispatcher $dispatcher)) {
             if ($evt.OperationId -cne $model.Active) { continue }
+            if ($evt.Type -eq 'CancellationDelayed') { $status.Text='WARNING: '+$evt.Message; continue }
             if ($evt.Type -eq 'SimulatorData') {
                 switch ($evt.Name) {
                     'Scopes' {
@@ -432,9 +440,9 @@ function New-NetworkEditorForm {
                 $status.Text=$evt.Message
             }
             elseif ($evt.Type -in @('Completed','Failed','Cancelled')) {
-                $old=$model.LastOperation;$model.Active=''
+                $old=$model.LastOperation;$model.Active='';$model.CancelRequested=$false;$cancel.Enabled=$false
                 $refresh.Enabled=-not $model.Closing;$plan.Enabled=-not $model.Closing;$draft.Enabled=-not $model.Closing;$scope.Enabled=-not $model.Closing
-                $apply.Enabled=($null -ne $model.Approved -and -not $model.Closing -and (& $canDo 'Apply'))
+                $apply.Enabled=($null -ne $model.Approved -and -not $model.Approved.plan.blocked -and -not $model.Closing -and (& $canDo 'Apply'))
                 if ($null -ne $model.Documents) { & $render }
                 if ($evt.Type -eq 'Failed') { $status.Text='ERROR: '+$evt.Message }
                 elseif ($evt.Type -eq 'Cancelled') { $status.Text='Operation cancelled' }
@@ -452,7 +460,7 @@ function New-NetworkEditorForm {
             $args.Cancel=$true; return
         }
         if ((& $commands.Count -Dispatcher $dispatcher) -gt 0) {
-            $args.Cancel=$true;$model.Closing=$true;& $commands.Cancel -Dispatcher $dispatcher
+            $args.Cancel=$true;$model.Closing=$true;$cancel.Enabled=$false;& $commands.Cancel -Dispatcher $dispatcher
             $status.Text='Closing after background worker exits...'
         }
     }.GetNewClosure())

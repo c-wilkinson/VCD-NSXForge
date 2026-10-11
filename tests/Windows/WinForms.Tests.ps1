@@ -202,6 +202,7 @@ if ($RunUiTests -and [Environment]::UserInteractive -and $PSVersionTable.PSEditi
                 Assert-True ($window.Form.Controls.Find($controlName,$true).Count -eq 1) "Missing editor control: $controlName"
             }
             Assert-True (-not $window.Form.Controls.Find('ApplySimulatorButton',$true)[0].Enabled)
+            Assert-True (-not $window.Form.Controls.Find('CancelEditorOperation',$true)[0].Enabled) 'Editor cancellation must be disabled while idle'
             foreach ($name in @('edgeFirewallRulesAddButton','ipSetsAddButton','manualIpReservationsAddButton')) {
                 $add=$window.Form.Controls.Find($name,$true)[0]
                 Assert-True ($add.Parent -is [System.Windows.Forms.FlowLayoutPanel]) "Toolbar not permanently visible for $name"

@@ -10,7 +10,9 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-Import-Module (Join-Path $ApplicationRoot 'src\Infrastructure\Logging\Logging.psm1') -Force
+Import-Module (Join-Path $ApplicationRoot 'src\Runtime\WorkerOperations.psm1') -ErrorAction Stop
+Confirm-WorkerOperationArguments -Operation $Operation -Arguments $Arguments
+Import-Module (Join-Path $ApplicationRoot 'src\Infrastructure\Logging\Logging.psm1') -ErrorAction Stop
 
 function Send-WorkerProgress {
     param([string]$Message, [int]$Percent)
@@ -52,7 +54,6 @@ try {
                 Percent = 95; WorkerThreadId = [System.Threading.Thread]::CurrentThread.ManagedThreadId
             })
             Write-AppLog -Logger $Logger -Component 'OfflinePlan' -Level 'INFO' -OperationId $OperationId -Message ('Offline report written; blocked={0}' -f $reports.Blocked)
-            $CancellationToken.ThrowIfCancellationRequested()
             Send-WorkerProgress -Message 'Offline plan report created (no VCD calls)' -Percent 100
         }
         'VcdRead' {
@@ -69,7 +70,7 @@ try {
             elseif ($Arguments.ContainsKey('BearerToken') -and $null -ne $Arguments.BearerToken) { $parameters.BearerToken = [string]$Arguments.BearerToken }
             # This operation is read-only; observed import is enabled only for explicit CLI use.
             $result = Invoke-VcdReadOperation @parameters
-            $CancellationToken.ThrowIfCancellationRequested()
+            # Read completed: a late cancel must not hide a snapshot already returned.
             Import-Module (Join-Path $ApplicationRoot 'src\Application\VcdRead\VcdReadSummary.psm1') -ErrorAction Stop
             $summary = New-VcdReadCompletionSummary -Result $result -ConnectionOnly:([bool]$Arguments.ConnectionOnly)
             $EventQueue.Enqueue([pscustomobject]@{
@@ -85,7 +86,7 @@ try {
             $CancellationToken.ThrowIfCancellationRequested()
             Send-WorkerProgress -Message 'Working with local synthetic simulator' -Percent 15
             $url=[string]$Arguments.ApiUrl
-            $name='';$payload=$null;$description=''
+            $name='';$payload=$null;$description='';$committed=$false
             switch ($Operation) {
                 'SimulatorScopes' {
                     $payload=Invoke-SimulatorApi -ApiUrl $url -Method GET -Resource scopes -CancellationToken $CancellationToken
@@ -109,6 +110,7 @@ try {
                 'SimulatorApply' {
                     Send-WorkerProgress -Message 'Checking approved plan and committing synthetic resources' -Percent 50
                     $result=Invoke-SimulatorApprovedApply -ApiUrl $url -Approved $Arguments.Approved -ActorDomain ([string]$Arguments.ActorDomain) -ActorTier ([int]$Arguments.ActorTier) -CancellationToken $CancellationToken
+                    $committed=$true
                     $description='Synthetic deployment revision '+$result.revision
                     $payload=[pscustomobject]@{Message=$description;Result=$result};$name='Apply'
                 }
@@ -122,19 +124,21 @@ try {
                 'SimulatorSaveDraft' {
                     Import-Module (Join-Path $ApplicationRoot 'src\Infrastructure\State\StateRepository.psm1') -ErrorAction Stop
                     $files=0
+                    $CancellationToken.ThrowIfCancellationRequested()
+                    # All three files form a logical save. Do not interrupt between files.
                     foreach ($kind in @('ipSets','edgeFirewallRules','manualIpReservations')) {
-                        $CancellationToken.ThrowIfCancellationRequested()
                         $doc=$Arguments.Documents[$kind]
                         $path=Get-NetworkStateDocumentPath -StateRoot ([string]$Arguments.StateRoot) -Environment 'simulator' -Scope ([string]$Arguments.Scope) -View desired -ResourceKind $kind
                         $checksum=Get-NetworkFileSha256 -Path $path
                         $null=Save-NetworkStateDocument -StateRoot ([string]$Arguments.StateRoot) -Environment 'simulator' -Scope ([string]$Arguments.Scope) -View desired -Document $doc -ExpectedSha256 $checksum
                         $files++
                     }
+                    $committed=$true
                     $description="Saved $files desired JSON files to the local simulator state repository"
                     $payload=[pscustomobject]@{Message=$description};$name='Draft'
                 }
             }
-            $CancellationToken.ThrowIfCancellationRequested()
+            if (-not $committed) { $CancellationToken.ThrowIfCancellationRequested() }
             $EventQueue.Enqueue([pscustomobject]@{
                 Type='SimulatorData';Name=$name;Message=$description;Payload=$payload
                 OperationId=$OperationId;Percent=95;WorkerThreadId=[Threading.Thread]::CurrentThread.ManagedThreadId
@@ -146,7 +150,7 @@ try {
             Import-Module (Join-Path $ApplicationRoot 'src\Application\Editing\NetworkRuleTemplates.psm1') -ErrorAction Stop
             Send-WorkerProgress -Message 'Saving reusable local firewall rule template' -Percent 35
             $saved=Save-NetworkRuleTemplate -Path ([string]$Arguments.TemplatePath) -Rule $Arguments.Rule -Name ([string]$Arguments.TemplateName) -BuiltInPath ([string]$Arguments.BuiltInPath)
-            $CancellationToken.ThrowIfCancellationRequested()
+            # A successful local write must not be reported as rolled back on late cancellation.
             $EventQueue.Enqueue([pscustomobject]@{
                 Type='SimulatorData';Name='TemplateSaved';Message=('Saved local template '+$saved.name)
                 Payload=[pscustomobject]@{Message=('Saved template '+$saved.name)}
@@ -165,6 +169,8 @@ try {
     Write-AppLog -Logger $Logger -Component 'DemoOperation' -Level 'INFO' -OperationId $OperationId -Message "Succeeded $Operation"
 }
 catch [System.OperationCanceledException] {
+    # The dispatcher uses this explicit evidence rather than treating any failure after Cancel() as cancellation.
+    $EventQueue.Enqueue([pscustomobject]@{Type='WorkerCancellationObserved';OperationId=$OperationId})
     Write-AppLog -Logger $Logger -Component 'DemoOperation' -Level 'WARN' -OperationId $OperationId -Message "Cancelled $Operation"
     throw
 }

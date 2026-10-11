@@ -369,6 +369,11 @@ function New-NetworkManagerForm {
     $timer.Add_Tick({
         $ui.Ticks++
         foreach ($item in @(& $commands.ReceiveEvents -Dispatcher $Dispatcher)) {
+            if ($item.Type -eq 'CancellationDelayed' -and $item.OperationId -eq $ui.ActiveOperationId) {
+                $status.Text = 'Cancellation delayed - worker still active'
+                & $logEvent ('WARNING: ' + $item.Message)
+                continue
+            }
             if (-not (& $commands.UpdateState -State $ui -Event $item)) { continue }
             $status.Text = $ui.Message
             $progress.Value = $ui.Percent
