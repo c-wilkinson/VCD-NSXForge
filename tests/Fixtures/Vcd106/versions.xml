@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SupportedVersions xmlns="http://www.vmware.com/vcloud/versions">
+  <VersionInfo><Version>38.0</Version></VersionInfo>
+  <VersionInfo><Version>39.0</Version></VersionInfo>
+</SupportedVersions>

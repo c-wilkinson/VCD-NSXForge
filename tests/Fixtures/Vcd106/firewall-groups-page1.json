@@ -1,0 +1,18 @@
+{
+  "resultTotal": 2,
+  "pageCount": 2,
+  "page": 1,
+  "pageSize": 1,
+  "values": [
+    {
+      "id": "urn:vcloud:firewallGroup:22222222-2222-4222-8222-222222222222",
+      "name": "APP-SERVERS",
+      "description": "Application servers",
+      "typeValue": "IP_SET",
+      "edgeGatewayRef": {
+        "id": "urn:vcloud:gateway:55555555-5555-4555-8555-555555555555",
+        "name": "edge-prod-01"
+      }
+    }
+  ]
+}

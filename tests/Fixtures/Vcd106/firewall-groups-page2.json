@@ -1,0 +1,17 @@
+{
+  "resultTotal": 2,
+  "pageCount": 2,
+  "page": 2,
+  "pageSize": 1,
+  "values": [
+    {
+      "id": "urn:vcloud:firewallGroup:77777777-7777-4777-8777-777777777777",
+      "name": "VM-CRITERIA-GROUP",
+      "typeValue": "VM_CRITERIA",
+      "edgeGatewayRef": {
+        "id": "urn:vcloud:gateway:55555555-5555-4555-8555-555555555555",
+        "name": "edge-prod-01"
+      }
+    }
+  ]
+}

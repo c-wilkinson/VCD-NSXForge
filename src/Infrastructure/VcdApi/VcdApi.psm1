@@ -14,7 +14,7 @@ function New-VcdApiClient {
         # Non-default HTTPS ports are allowed for self-hosted instances.
         throw 'The VCD base URI must be an absolute HTTPS URI.'
     }
-    if ($BaseUri.AbsolutePath -ne '/') { throw 'The VCD base URI must contain only the origin.' }
+    if ($BaseUri.AbsolutePath -ne '/' -or $BaseUri.UserInfo -or $BaseUri.Query -or $BaseUri.Fragment) { throw 'The VCD base URI must contain only the origin, with no credentials, query or fragment.' }
     [pscustomobject]@{
         BaseUri = $BaseUri
         ApiVersion = $ApiVersion
@@ -74,22 +74,73 @@ function Invoke-VcdPagedRead {
         [System.Threading.CancellationToken]$CancellationToken = [System.Threading.CancellationToken]::None
     )
     $accumulator = [System.Collections.Generic.List[object]]::new()
+    $knownIds = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    $expectedPages = $null
+    $expectedTotal = $null
     for ($page = 1; $page -le 10000; $page++) {
-        $query = '?filter={0}&page={1}&pageSize={2}' -f ([uri]::EscapeDataString($Filter)), $page, $PageSize
         $CancellationToken.ThrowIfCancellationRequested()
+        $query = '?filter={0}&page={1}&pageSize={2}' -f ([uri]::EscapeDataString($Filter)), $page, $PageSize
         $response = Invoke-VcdRead -Client $Client -Path ($ResourcePath + $query) -CancellationToken $CancellationToken
         if ($null -eq $response -or $null -eq $response.values) { throw 'VCD paging response is missing values.' }
-        foreach ($item in @($response.values)) { $accumulator.Add($item) }
         if ($null -eq $response.pageCount) { throw 'VCD paging response is missing pageCount.' }
-        if ($page -eq 1 -and [int]$response.pageCount -eq 0 -and @($response.values).Count -eq 0) {
-            if ($null -ne $response.PSObject.Properties['resultTotal'] -and [int]$response.resultTotal -ne 0) {
+
+        # Metadata is required to agree across pages; accepting contradictory
+        # totals makes a partial live snapshot look complete and safe to apply.
+        $pages = 0
+        if (-not [int]::TryParse([string]$response.pageCount, [ref]$pages) -or $pages -lt 0 -or $pages -gt 10000) {
+            throw 'VCD paging response contains an invalid pageCount.'
+        }
+        if ($null -ne $expectedPages -and $expectedPages -ne $pages) {
+            throw 'VCD paging pageCount changed during collection; snapshot is inconsistent.'
+        }
+        $expectedPages = $pages
+        if ($null -ne $response.PSObject.Properties['page']) {
+            $returnedPage = 0
+            if (-not [int]::TryParse([string]$response.page, [ref]$returnedPage) -or
+                ($returnedPage -ne $page -and -not ($pages -eq 0 -and $returnedPage -eq 0))) {
+                throw 'VCD paging returned an unexpected page number.'
+            }
+        }
+        if ($null -ne $response.PSObject.Properties['pageSize']) {
+            $returnedSize = 0
+            if (-not [int]::TryParse([string]$response.pageSize, [ref]$returnedSize) -or
+                $returnedSize -lt 0 -or $returnedSize -gt $PageSize) {
+                throw 'VCD paging returned an invalid pageSize.'
+            }
+        }
+        if ($null -ne $response.PSObject.Properties['resultTotal']) {
+            $total = 0
+            if (-not [int]::TryParse([string]$response.resultTotal, [ref]$total) -or $total -lt 0) {
+                throw 'VCD paging returned an invalid resultTotal.'
+            }
+            if ($null -ne $expectedTotal -and $expectedTotal -ne $total) {
+                throw 'VCD paging resultTotal changed during collection; snapshot is inconsistent.'
+            }
+            $expectedTotal = $total
+        }
+
+        $items = @($response.values)
+        if ($pages -eq 0) {
+            if ($items.Count -ne 0 -or ($null -ne $expectedTotal -and $expectedTotal -ne 0)) {
                 throw 'VCD pagination returned inconsistent totals for an empty result.'
             }
             return $accumulator.ToArray()
         }
-        if ([int]$response.pageCount -lt $page) { throw 'VCD paging returned an invalid pageCount.' }
-        if ($page -ge [int]$response.pageCount) {
-            if ($null -ne $response.PSObject.Properties['resultTotal'] -and [int]$response.resultTotal -ne $accumulator.Count) {
+        if ($page -gt $pages -or ($page -lt $pages -and $items.Count -eq 0)) {
+            throw 'VCD paging returned an invalid or empty intermediate page.'
+        }
+        if ($items.Count -gt $PageSize) { throw 'VCD paging response exceeded requested pageSize.' }
+        foreach ($item in $items) {
+            if ($null -ne $item -and $null -ne $item.PSObject.Properties['id'] -and -not [string]::IsNullOrWhiteSpace([string]$item.id)) {
+                if (-not $knownIds.Add([string]$item.id)) { throw 'VCD pagination repeated an object ID; snapshot is inconsistent.' }
+            }
+            $accumulator.Add($item)
+        }
+        if ($null -ne $expectedTotal -and $accumulator.Count -gt $expectedTotal) {
+            throw 'VCD paging returned more objects than resultTotal.'
+        }
+        if ($page -eq $pages) {
+            if ($null -ne $expectedTotal -and $expectedTotal -ne $accumulator.Count) {
                 throw 'VCD pagination returned fewer or more items than resultTotal; snapshot is incomplete.'
             }
             return $accumulator.ToArray()

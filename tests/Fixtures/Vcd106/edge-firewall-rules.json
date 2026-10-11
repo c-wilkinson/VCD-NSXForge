@@ -1,0 +1,86 @@
+{
+  "status": "REALIZED",
+  "systemRules": [
+    {
+      "id": "urn:vcloud:firewallRule:88888888-8888-4888-8888-888888888888",
+      "name": "System rule (not managed)",
+      "enabled": true,
+      "actionValue": "ALLOW",
+      "logging": false
+    }
+  ],
+  "userDefinedRules": [
+    {
+      "id": "urn:vcloud:firewallRule:11111111-1111-4111-8111-111111111111",
+      "name": "SQL Always On Listener",
+      "description": "App to database; TCP 1433",
+      "sourceFirewallGroups": [
+        {
+          "id": "urn:vcloud:firewallGroup:22222222-2222-4222-8222-222222222222",
+          "name": "APP-SERVERS"
+        }
+      ],
+      "sourceFirewallIpAddresses": [],
+      "destinationFirewallGroups": [],
+      "destinationFirewallIpAddresses": [
+        "10.60.20.30"
+      ],
+      "applicationPortProfiles": [
+        {
+          "id": "urn:vcloud:applicationPortProfile:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "name": "SQL-TCP-1433"
+        }
+      ],
+      "ipProtocol": "IPV4",
+      "actionValue": "ALLOW",
+      "direction": "IN_OUT",
+      "logging": true,
+      "enabled": true,
+      "version": {
+        "version": 7
+      },
+      "comments": "CHG-1024",
+      "appliedTo": {
+        "id": "urn:vcloud:gateway:55555555-5555-4555-8555-555555555555",
+        "name": "edge-prod-01"
+      },
+      "loggingId": "log-sql-01",
+      "relativePosition": {
+        "rulePosition": "TOP"
+      }
+    },
+    {
+      "id": "urn:vcloud:firewallRule:99999999-9999-4999-8999-999999999999",
+      "name": "Block legacy RDP",
+      "description": "Deny east-west legacy access",
+      "sourceFirewallGroups": [],
+      "destinationFirewallGroups": [
+        {
+          "id": "urn:vcloud:firewallGroup:77777777-7777-4777-8777-777777777777",
+          "name": "VM-CRITERIA-GROUP"
+        }
+      ],
+      "rawPortProtocols": [
+        {
+          "protocol": "TCP",
+          "ports": "3389"
+        }
+      ],
+      "actionValue": "DROP",
+      "logging": true,
+      "enabled": false,
+      "version": {
+        "version": 3
+      }
+    }
+  ],
+  "defaultRules": [
+    {
+      "id": "urn:vcloud:firewallRule:dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "name": "Default Deny",
+      "actionValue": "DROP",
+      "enabled": true,
+      "logging": false
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "resultTotal": 1,
+  "pageCount": 1,
+  "page": 1,
+  "pageSize": 100,
+  "values": [
+    {
+      "id": "urn:vcloud:networkManualIpReservation:33333333-3333-4333-8333-333333333333",
+      "name": "Cluster VIP",
+      "description": "SQL cluster virtual IP",
+      "networkRef": {
+        "id": "urn:vcloud:network:44444444-4444-4444-8444-444444444444",
+        "name": "prod-db-net"
+      },
+      "ipAddresses": "10.60.20.30"
+    }
+  ]
+}
