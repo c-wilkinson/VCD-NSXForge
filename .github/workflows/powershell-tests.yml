@@ -32,10 +32,17 @@ jobs:
           { throw 'Windows PowerShell 5.1 is required' };
           Write-Host ('Running ' + $PSVersionTable.PSVersion.ToString())"
 
+      - name: Audit runtime capabilities without policy changes
+        shell: cmd
+        run: >-
+          powershell.exe -NoLogo -NoProfile -NonInteractive -STA
+          -File ".\tools\Test-RuntimeCompatibility.ps1"
+          -OutputPath ".\test-results\RuntimeCompatibility.json"
+
       - name: Run headless NUnit 3 tests
         shell: cmd
         run: >-
-          powershell.exe -NoLogo -NoProfile -NonInteractive -STA -ExecutionPolicy Bypass
+          powershell.exe -NoLogo -NoProfile -NonInteractive -STA
           -File ".\tools\Invoke-Tests.ps1"
           -NUnitPath ".\test-results\TEST-VcdNetworkManager.xml"
 
@@ -43,7 +50,7 @@ jobs:
         if: always()
         shell: cmd
         run: >-
-          powershell.exe -NoLogo -NoProfile -NonInteractive -STA -ExecutionPolicy Bypass
+          powershell.exe -NoLogo -NoProfile -NonInteractive -STA
           -File ".\tools\Write-GitHubTestSummary.ps1"
           -NUnitPath ".\test-results\TEST-VcdNetworkManager.xml"
 
@@ -52,6 +59,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nunit-ps51-headless
-          path: test-results/TEST-VcdNetworkManager.xml
+          path: |
+            test-results/TEST-VcdNetworkManager.xml
+            test-results/RuntimeCompatibility.json
           retention-days: 14
           if-no-files-found: error
