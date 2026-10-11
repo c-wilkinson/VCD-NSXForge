@@ -2,6 +2,7 @@
 # Login POST is the only permitted POST; data requests are GET-only.
 Set-StrictMode -Version Latest
 Add-Type -AssemblyName System.Net.Http
+Import-Module (Join-Path $PSScriptRoot '..\..\Domain\Access\VcdSessionLifecycle.psm1') -ErrorAction Stop
 
 function New-VcdHttpTransport {
     [CmdletBinding()]
@@ -27,7 +28,10 @@ function New-VcdHttpTransport {
     # Leave platform certificate validation enabled. Do not use -SkipCertificateCheck.
     $http = [System.Net.Http.HttpClient]::new($Handler, $true)
     $http.Timeout = [TimeSpan]::FromSeconds($TimeoutSeconds)
-    $state = @{ Http = $http; BaseUri = $BaseUri; Token = ''; Tenant = $TenantContextOrgId; AllowLoopbackHttp = [bool]$safeLoopback }
+    $state = @{ Http = $http; BaseUri = $BaseUri; Token = ''; Tenant = $TenantContextOrgId; AllowLoopbackHttp = [bool]$safeLoopback; Gate = [object]::new(); Status = 'ReauthenticationRequired'; ExpiresUtc = $null }
+    # GetNewClosure creates its own dynamic scope. Capture the imported helper
+    # explicitly rather than depending on indirect module export visibility.
+    $lifecycleCheck = (Get-Command Get-VcdSessionLifecycleState -ErrorAction Stop).ScriptBlock
     $sender = {
         param($call)
         if ($call.Method -cne 'GET') { throw 'Only GET is permitted through the VCD read transport.' }
@@ -37,8 +41,18 @@ function New-VcdHttpTransport {
             -not ($uri.AbsolutePath.StartsWith('/api/') -or $uri.AbsolutePath.StartsWith('/cloudapi/'))) {
             throw 'VCD read request attempted to leave the configured API origin or path.'
         }
+        $ct = if ($call.PSObject.Properties.Name -contains 'CancellationToken') { $call.CancellationToken } else { [System.Threading.CancellationToken]::None }
+        $ct.ThrowIfCancellationRequested()
+        # One transport owns one session. Serialise send/login/invalidation so a
+        # concurrent caller cannot send a stale token while reauthentication runs.
+        while (-not [System.Threading.Monitor]::TryEnter($state.Gate, 100)) { $ct.ThrowIfCancellationRequested() }
+        try {
+        $health = & $lifecycleCheck -Status $state.Status -ExpiresUtc $state.ExpiresUtc
         if ($uri.AbsolutePath.StartsWith('/cloudapi/') -and -not $state.Token) {
             throw 'VCD read denied: no active authenticated session token.'
+        }
+        if ($uri.AbsolutePath.StartsWith('/cloudapi/') -and -not $health.CanUseToken) {
+            throw 'VCD session unavailable; reauthentication required.'
         }
         $req = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Get, $uri)
         try {
@@ -52,11 +66,11 @@ function New-VcdHttpTransport {
                 $req.Headers.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $state.Token)
             }
             if ($state.Tenant) { [void]$req.Headers.TryAddWithoutValidation('X-VMWARE-VCLOUD-TENANT-CONTEXT', $state.Tenant) }
-            $ct = if ($call.PSObject.Properties.Name -contains 'CancellationToken') { $call.CancellationToken } else { [System.Threading.CancellationToken]::None }
             $response = $state.Http.SendAsync($req, $ct).GetAwaiter().GetResult()
             try {
                 if (-not $response.IsSuccessStatusCode) {
-                    if ([int]$response.StatusCode -in @(401,403)) { $state.Token = '' }
+                    if ([int]$response.StatusCode -eq 401) { $state.Token = ''; $state.Status = 'ReauthenticationRequired'; $state.ExpiresUtc = $null }
+                    if ([int]$response.StatusCode -eq 403) { $state.Token = ''; $state.Status = 'Revoked/Forbidden'; $state.ExpiresUtc = $null }
                     # Response bodies, reason phrases and server headers are untrusted.
                     throw "VCD GET failed: HTTP $([int]$response.StatusCode)."
                 }
@@ -68,6 +82,8 @@ function New-VcdHttpTransport {
             finally { $response.Dispose() }
         }
         finally { $req.Dispose() }
+        }
+        finally { [System.Threading.Monitor]::Exit($state.Gate) }
     }.GetNewClosure()
     return [pscustomobject]@{ RequestSender = $sender; InternalState = $state }
 }
@@ -82,13 +98,18 @@ function Connect-VcdHttpTransport {
           [System.Threading.CancellationToken]$CancellationToken = [System.Threading.CancellationToken]::None)
     $CancellationToken.ThrowIfCancellationRequested()
     # A failed reauthentication attempt must never retain a prior token.
+    while (-not [System.Threading.Monitor]::TryEnter($Transport.InternalState.Gate, 100)) { $CancellationToken.ThrowIfCancellationRequested() }
+    try {
     $Transport.InternalState.Token = ''
+    $Transport.InternalState.Status = 'ReauthenticationRequired'
+    $Transport.InternalState.ExpiresUtc = $null
     if ($PSCmdlet.ParameterSetName -eq 'BearerToken') {
         if ([string]::IsNullOrWhiteSpace($BearerToken)) { throw 'Bearer token must not be blank.' }
         if ($Transport.InternalState.AllowLoopbackHttp -and $BearerToken -cne 'simulator-read-only') {
             throw 'Only the built-in synthetic token is accepted by the loopback simulator transport.'
         }
         $Transport.InternalState.Token = $BearerToken
+        $Transport.InternalState.Status = 'Valid'
         return
     }
     if ($Transport.InternalState.AllowLoopbackHttp) { throw 'Never send credentials over simulator HTTP. Use the synthetic bearer token.' }
@@ -109,17 +130,53 @@ function Connect-VcdHttpTransport {
             $token = @($tokenValues)[0]
             if ([string]::IsNullOrWhiteSpace($token)) { throw 'VCD login returned an empty token.' }
             $Transport.InternalState.Token = [string]$token
+            $Transport.InternalState.Status = 'Valid'
         }
         finally { $result.Dispose() }
     }
     finally { $req.Dispose(); $basic = $null; $networkCredential = $null }
+    }
+    catch {
+        $Transport.InternalState.Token = ''
+        $Transport.InternalState.Status = 'RenewalUnavailable'
+        throw
+    }
+    finally { [System.Threading.Monitor]::Exit($Transport.InternalState.Gate) }
+}
+
+function Set-VcdTransportSessionLifetime {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Transport, [Parameter(Mandatory)]$Session)
+    $expiry = Get-VcdVerifiedSessionExpiry -Session $Session
+    [System.Threading.Monitor]::Enter($Transport.InternalState.Gate)
+    try {
+        if ($Transport.InternalState.Status -ne 'Valid') { throw 'VCD session unavailable; reauthentication required.' }
+        $Transport.InternalState.ExpiresUtc = $expiry
+    }
+    finally { [System.Threading.Monitor]::Exit($Transport.InternalState.Gate) }
+}
+
+function Get-VcdTransportSessionStatus {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Transport)
+    [System.Threading.Monitor]::Enter($Transport.InternalState.Gate)
+    try {
+        return (Get-VcdSessionLifecycleState -Status $Transport.InternalState.Status -ExpiresUtc $Transport.InternalState.ExpiresUtc)
+    }
+    finally { [System.Threading.Monitor]::Exit($Transport.InternalState.Gate) }
 }
 
 function Close-VcdHttpTransport {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Transport)
-    $Transport.InternalState.Token = ''
-    $Transport.InternalState.Http.Dispose()
+    [System.Threading.Monitor]::Enter($Transport.InternalState.Gate)
+    try {
+        $Transport.InternalState.Token = ''
+        $Transport.InternalState.Status = 'ReauthenticationRequired'
+        $Transport.InternalState.ExpiresUtc = $null
+        $Transport.InternalState.Http.Dispose()
+    }
+    finally { [System.Threading.Monitor]::Exit($Transport.InternalState.Gate) }
 }
 
-Export-ModuleMember -Function New-VcdHttpTransport, Connect-VcdHttpTransport, Close-VcdHttpTransport
+Export-ModuleMember -Function New-VcdHttpTransport, Connect-VcdHttpTransport, Close-VcdHttpTransport, Set-VcdTransportSessionLifetime, Get-VcdTransportSessionStatus
