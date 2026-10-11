@@ -1,6 +1,7 @@
 # Offline-only three-way plan. No disk, HTTP, UI, or deployment code.
 Set-StrictMode -Version Latest
 Import-Module (Join-Path $PSScriptRoot '..\State\StateModel.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot '..\State\VcdPolicyModel.psm1') -ErrorAction Stop
 
 function Get-NetworkDocumentIndex {
     param($Document)
@@ -36,7 +37,8 @@ function New-NetworkChangePlan {
           $Applied,
           $Observed,
           [Parameter(Mandatory)][string]$Environment,
-          [Parameter(Mandatory)][string]$Scope)
+          [Parameter(Mandatory)][string]$Scope,
+          $VcdPolicy)
     Confirm-NetworkStateViewModel -View $Desired
     $appliedAvailable = ($null -ne $Applied -and $Applied.Available)
     $observedAvailable = ($null -ne $Observed -and $Observed.Available)
@@ -46,6 +48,23 @@ function New-NetworkChangePlan {
     $actions = [System.Collections.Generic.List[object]]::new()
     $drift = [System.Collections.Generic.List[object]]::new()
     $warnings = [System.Collections.Generic.List[string]]::new()
+    $policyFindings = [System.Collections.Generic.List[object]]::new()
+    if ($null -ne $VcdPolicy) {
+        $null = Confirm-VcdPolicyDocument -Document $VcdPolicy
+        if ([string]$VcdPolicy.gatewayId -notmatch '^urn:vcloud:') { throw 'VCD policy has invalid gateway scope.' }
+        foreach ($section in @('systemRules','userDefinedRules','defaultRules')) {
+            foreach ($rule in @($VcdPolicy.sections.$section)) {
+                if ($section -ne 'userDefinedRules' -or -not $rule.capabilities.CanProjectToV2) {
+                    $policyFindings.Add([pscustomobject]@{
+                        Section=$section; RuleId=$rule.id; Name=$rule.name
+                        Reasons=@($rule.capabilities.Reasons)
+                    })
+                }
+            }
+        }
+        $warnings.Add('Live VCD v3 policy is read-only; this is not a deployable or approved plan.')
+        if ($policyFindings.Count -gt 0) { $warnings.Add("VCD policy contains $($policyFindings.Count) protected or unsupported rules; no automatic v2 policy replacement is permitted.") }
+    }
     if (-not $appliedAvailable) { $warnings.Add('No applied baseline exists: this is a preview only, not an authorised deployment plan.') }
     if (-not $observedAvailable) { $warnings.Add('No observed snapshot exists: drift cannot be ruled out; live refresh required before deployment.') }
 
@@ -122,10 +141,11 @@ function New-NetworkChangePlan {
         scope = $Scope
         observedAvailable = [bool]$observedAvailable
         appliedAvailable = [bool]$appliedAvailable
-        blocked = [bool]($drift.Count -gt 0 -or -not $observedAvailable -or -not $appliedAvailable)
+        blocked = [bool]($null -ne $VcdPolicy -or $drift.Count -gt 0 -or -not $observedAvailable -or -not $appliedAvailable)
         summary = [pscustomobject]$counts
         warnings = @($warnings.ToArray())
         drift = @($drift.ToArray())
+        policyFindings = @($policyFindings.ToArray())
         actions = $sorted
     }
 }

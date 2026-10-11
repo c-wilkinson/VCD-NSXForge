@@ -41,3 +41,10 @@ Invoke-TestCase -Name 'NUnit 3 report serializes pass fail skip and escaped fail
     }
     finally { if ([IO.File]::Exists($file)) { [IO.File]::Delete($file) } }
 }
+
+Invoke-TestCase -Name 'Expected-error assertions never accept missing commands as valid failures' -Body {
+    $message = ''
+    try { Assert-Throws { Invoke-ThisCommandDoesNotExistIssue2 } }
+    catch { $message = $_.Exception.Message }
+    Assert-True ($message -match 'unavailable command') 'A missing function must fail the assertion rather than pass it'
+}

@@ -2,6 +2,8 @@ Import-Module (Join-Path $ProjectRoot 'src\Application\VcdRead\VcdReadOperation.
 Import-Module (Join-Path $ProjectRoot 'src\Application\VcdRead\VcdSnapshot.psm1') -Force -ErrorAction Stop
 Import-Module (Join-Path $ProjectRoot 'src\Infrastructure\VcdApi\VcdApi.psm1') -Force -Global -ErrorAction Stop
 Import-Module (Join-Path $ProjectRoot 'src\Infrastructure\VcdApi\VcdHttp.psm1') -Force -ErrorAction Stop
+Import-Module (Join-Path $ProjectRoot 'src\Domain\State\VcdPolicyModel.psm1') -Global -ErrorAction Stop
+Import-Module (Join-Path $ProjectRoot 'src\Infrastructure\State\VcdPolicyRepository.psm1') -Global -ErrorAction Stop
 . (Join-Path $ProjectRoot 'tests\Mocks\FakeVcd106.ps1')
 
 function Assert-Vcd106Throws {
@@ -26,6 +28,7 @@ Invoke-TestCase -Name '10.6 prerequisite commands are exported into the test run
         'Get-VcdFirewallGroupDetails', 'Get-VcdManualIpReservations',
         'Invoke-VcdPagedRead', 'Get-VcdReadSnapshot',
         'ConvertTo-VcdObservedDocuments', 'Save-VcdRawSnapshot',
+        'ConvertTo-VcdPolicyDocument', 'Save-VcdPolicyObserved',
         'Invoke-VcdReadOperation', 'New-VcdHttpTransport',
         'Connect-VcdHttpTransport', 'Close-VcdHttpTransport'
     )) {

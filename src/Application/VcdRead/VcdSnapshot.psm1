@@ -1,9 +1,12 @@
 # Read-only orchestration. A raw snapshot always preserves complete VCD results;
-# projection to the narrower Phase 2 schema is fail-closed.
+# v3 normalization is lossless; legacy v2 projection stays fail-closed.
 Set-StrictMode -Version Latest
 Import-Module (Join-Path $PSScriptRoot '..\..\Infrastructure\VcdApi\VcdApi.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot '..\..\Infrastructure\State\StateRepository.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot '..\..\Domain\State\StateModel.psm1') -Force
+# Avoid Force-reloading a shared policy module: doing so can remove its exported
+# functions from the importing test runner or another already-loaded module.
+Import-Module (Join-Path $PSScriptRoot '..\..\Domain\State\VcdPolicyModel.psm1') -ErrorAction Stop
 
 function Get-VcdReadSnapshot {
     [CmdletBinding()]
@@ -148,6 +151,29 @@ function ConvertTo-VcdObservedDocuments {
     return $documents
 }
 
+function ConvertTo-VcdLegacyPolicyProjection {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Policy)
+    $null = Confirm-VcdPolicyDocument -Document $Policy
+    if ([string]$Policy.status -cne 'REALIZED') { throw 'Only REALIZED firewall policies can be projected into the legacy v2 model.' }
+    if (@($Policy.sections.systemRules).Count -gt 0 -or @($Policy.sections.defaultRules).Count -gt 0) {
+        throw 'Protected system/default firewall rules are not represented in the v2 schema; only v3 preserves the complete policy.'
+    }
+    foreach ($group in @($Policy.firewallGroups)) {
+        if ($group.typeValue -cne 'IP_SET' -or -not $group.membershipResolved) {
+            throw "Firewall Group '$($group.id)' is not safely representable in v2."
+        }
+    }
+    foreach ($rule in @($Policy.sections.userDefinedRules)) {
+        if (-not $rule.capabilities.CanProjectToV2) {
+            throw "Rule '$($rule.name)' cannot be projected to v2: $(@($rule.capabilities.Reasons) -join '; ')"
+        }
+    }
+    # This function retains the strict legacy conversion checks for reservations,
+    # unknown semantics, references and supported service fields.
+    return (ConvertTo-VcdObservedDocuments -Snapshot $Policy.sourceSnapshot)
+}
+
 function Save-VcdRawSnapshot {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Snapshot, [Parameter(Mandatory)][string]$OutputDirectory)
@@ -210,4 +236,4 @@ function Publish-VcdObservedView {
     }
 }
 
-Export-ModuleMember -Function Get-VcdReadSnapshot, ConvertTo-VcdObservedDocuments, Save-VcdRawSnapshot, Publish-VcdObservedView
+Export-ModuleMember -Function Get-VcdReadSnapshot, ConvertTo-VcdObservedDocuments, ConvertTo-VcdLegacyPolicyProjection, Save-VcdRawSnapshot, Publish-VcdObservedView

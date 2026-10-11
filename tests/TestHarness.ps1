@@ -53,7 +53,16 @@ function Assert-Equal {
 function Assert-Throws {
     param([scriptblock]$Body, [string]$Because = 'Expected an exception')
     $thrown = $false
-    try { & $Body | Out-Null } catch { $thrown = $true }
+    try { & $Body | Out-Null }
+    catch {
+        $thrown = $true
+        # A missing module/command is a broken test setup, not proof that an
+        # invalid API request or policy was safely rejected.
+        if ($_.Exception -is [System.Management.Automation.CommandNotFoundException] -or
+            [string]$_.FullyQualifiedErrorId -match 'CommandNotFoundException') {
+            throw ('Expected-error assertion invoked an unavailable command: ' + $_.Exception.Message)
+        }
+    }
     if (-not $thrown) { throw $Because }
 }
 

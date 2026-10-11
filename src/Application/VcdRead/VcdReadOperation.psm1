@@ -2,6 +2,10 @@ Set-StrictMode -Version Latest
 Import-Module (Join-Path $PSScriptRoot '..\..\Infrastructure\VcdApi\VcdApi.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot '..\..\Infrastructure\VcdApi\VcdHttp.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'VcdSnapshot.psm1') -Force
+# Explicit imports are required: a dependency imported privately by VcdSnapshot
+# is not automatically exported into this module's command resolution scope.
+Import-Module (Join-Path $PSScriptRoot '..\..\Domain\State\VcdPolicyModel.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\..\Infrastructure\State\VcdPolicyRepository.psm1') -ErrorAction Stop
 
 function Invoke-VcdReadOperation {
     [CmdletBinding(DefaultParameterSetName='Credential')]
@@ -12,6 +16,7 @@ function Invoke-VcdReadOperation {
         [Parameter(ParameterSetName='Token')][string]$BearerToken,
         [scriptblock]$RequestSender,
         [switch]$WriteObserved,
+        [switch]$WritePolicyObserved,
         [string]$StateRoot,
         [string]$Environment,
         [string]$Scope,
@@ -29,8 +34,9 @@ function Invoke-VcdReadOperation {
             throw 'Simulator must use an HTTP loopback origin at 127.0.0.1.'
         }
     }
-    if ($WriteObserved -and (-not $StateRoot -or -not $Environment -or -not $Scope)) { throw 'StateRoot, Environment and Scope are required for observed-state import.' }
-    if ($WriteObserved -and @($VcdConfiguration.networkIds).Count -eq 0) { throw 'Observed-state import requires one or more explicit network URNs; an unqueried reservation scope cannot be treated as empty.' }
+    if (($WriteObserved -or $WritePolicyObserved) -and (-not $StateRoot -or -not $Environment -or -not $Scope)) { throw 'StateRoot, Environment and Scope are required for observed-state import.' }
+    if (($WriteObserved -or $WritePolicyObserved) -and @($VcdConfiguration.networkIds).Count -eq 0) { throw 'Observed-state import requires one or more explicit network URNs; an unqueried reservation scope cannot be treated as empty.' }
+    if ($ConnectionOnly -and ($WriteObserved -or $WritePolicyObserved)) { throw 'Connection-only cannot publish observed state.' }
     if (-not $ConnectionOnly -and (-not $VcdConfiguration.gatewayId)) { throw 'Set vcd.gatewayId to an Edge Gateway URN before retrieving a snapshot.' }
     $transport = $null
     try {
@@ -65,14 +71,27 @@ function Invoke-VcdReadOperation {
         $CancellationToken.ThrowIfCancellationRequested()
         # Persist raw data first so unsupported mapping can be diagnosed offline.
         $rawPath = Save-VcdRawSnapshot -Snapshot $snapshot -OutputDirectory $OutputDirectory
-        if ($WriteObserved) {
-            $docs = ConvertTo-VcdObservedDocuments -Snapshot $snapshot
+        $policyPath = ''
+        if ($WriteObserved -or $WritePolicyObserved) {
+            # Commit the complete v3 observed policy independently of legacy v2.
+            # An advanced policy can be inspected safely even when the v2 editor
+            # cannot represent it. No desired/applied state is modified here.
+            $policy = ConvertTo-VcdPolicyDocument -Snapshot $snapshot
             $CancellationToken.ThrowIfCancellationRequested()
-            $null = Publish-VcdObservedView -Documents $docs -StateRoot $StateRoot -Environment $Environment -Scope $Scope
+            $policySave = Save-VcdPolicyObserved -Document $policy -StateRoot $StateRoot -Environment $Environment -Scope $Scope
+            $policyPath = $policySave.Path
+            if ($WriteObserved) {
+                # Legacy v2 remains deliberately strict. On failure the old v2
+                # observed directory is untouched; the v3 policy and raw snapshot
+                # remain available for inspection and diagnosis.
+                $docs = ConvertTo-VcdLegacyPolicyProjection -Policy $policy
+                $CancellationToken.ThrowIfCancellationRequested()
+                $null = Publish-VcdObservedView -Documents $docs -StateRoot $StateRoot -Environment $Environment -Scope $Scope
+            }
         }
         return [pscustomobject]@{
             Connected = $true; ApiVersion = $client.ApiVersion
-            SnapshotPath = $rawPath; ObservedImported = [bool]$WriteObserved
+            SnapshotPath = $rawPath; PolicyPath = $policyPath; PolicyImported = [bool]($WriteObserved -or $WritePolicyObserved); ObservedImported = [bool]$WriteObserved
             FirewallRuleCount = @($snapshot.firewall.userDefinedRules).Count
             IpSetCount = @($snapshot.ipSetDetails).Count
             ReservationCount = @($snapshot.manualIpReservations).Count
