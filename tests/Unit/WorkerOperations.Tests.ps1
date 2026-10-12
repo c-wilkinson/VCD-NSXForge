@@ -1,6 +1,10 @@
 Import-Module (Join-Path $ProjectRoot 'src\Runtime\WorkerOperations.psm1') -Force
 Import-Module (Join-Path $ProjectRoot 'src\Runtime\Dispatcher.psm1') -Force
 
+Invoke-TestCase -Name 'VCD read operation contract recognises isolated read-only capability preflight' -Body {
+    Confirm-WorkerOperationArguments -Operation VcdRead -Arguments @{VcdConfiguration=[pscustomobject]@{};OutputDirectory='reports';ConnectionOnly=$false;CapabilitiesOnly=$true}
+    Assert-Throws { Confirm-WorkerOperationArguments -Operation VcdRead -Arguments @{VcdConfiguration=[pscustomobject]@{};OutputDirectory='reports';ConnectionOnly=$true;CapabilitiesOnly=$true} }
+}
 Invoke-TestCase -Name 'Every published worker operation has a single, unique definition' -Body {
     $definitions = @(Get-WorkerOperationDefinitions)
     Assert-Equal 11 $definitions.Count

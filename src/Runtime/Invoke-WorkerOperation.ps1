@@ -66,6 +66,7 @@ try {
                 CancellationToken = $CancellationToken
                 ConnectionOnly = [bool]$Arguments.ConnectionOnly
                 DiscoverOnly = [bool]($Arguments.ContainsKey('DiscoverOnly') -and $Arguments.DiscoverOnly)
+                CapabilitiesOnly = [bool]($Arguments.ContainsKey('CapabilitiesOnly') -and $Arguments.CapabilitiesOnly)
             }
             if ($Arguments.ContainsKey('Credential') -and $null -ne $Arguments.Credential) { $parameters.Credential = $Arguments.Credential }
             elseif ($Arguments.ContainsKey('BearerToken') -and $null -ne $Arguments.BearerToken) { $parameters.BearerToken = [string]$Arguments.BearerToken }
@@ -79,6 +80,16 @@ try {
                     Percent = 95; WorkerThreadId = [Threading.Thread]::CurrentThread.ManagedThreadId
                 })
                 Send-WorkerProgress -Message 'Read-only VCD discovery complete; no configuration changed' -Percent 100
+                break
+            }
+            if ($result.PSObject.Properties.Name -contains 'CapabilitiesAssessed' -and $result.CapabilitiesAssessed) {
+                $report = $result.Capability
+                $EventQueue.Enqueue([pscustomobject]@{
+                    Type='VcdCapabilities'; OperationId=$OperationId; Payload=$report
+                    Message=('Compatibility: {0}; {1} findings; live apply disabled' -f $report.Verdict,@($report.Findings).Count)
+                    Percent=95; WorkerThreadId=[Threading.Thread]::CurrentThread.ManagedThreadId
+                })
+                Send-WorkerProgress -Message 'Read-only compatibility preflight completed' -Percent 100
                 break
             }
             # Read completed: a late cancel must not hide a snapshot already returned.

@@ -6,7 +6,7 @@ $script:OperationDefinitions = [ordered]@{
     ProgressDemo        = @{ Required = @{}; Optional = @{}; Kind = 'Demo' }
     FailureDemo         = @{ Required = @{}; Optional = @{}; Kind = 'Demo' }
     OfflinePlan         = @{ Required = @{ StateRoot='Text'; Environment='Text'; Scope='Text'; OutputDirectory='Text' }; Optional = @{}; Kind = 'Offline' }
-    VcdRead             = @{ Required = @{ VcdConfiguration='Object'; OutputDirectory='Text'; ConnectionOnly='Boolean' }; Optional = @{ Credential='Object'; BearerToken='Text'; DiscoverOnly='Boolean' }; Kind = 'ReadOnly' }
+    VcdRead             = @{ Required = @{ VcdConfiguration='Object'; OutputDirectory='Text'; ConnectionOnly='Boolean' }; Optional = @{ Credential='Object'; BearerToken='Text'; DiscoverOnly='Boolean'; CapabilitiesOnly='Boolean' }; Kind = 'ReadOnly' }
     SimulatorScopes     = @{ Required = @{ ApiUrl='SimulatorOrigin' }; Optional = @{}; Kind = 'Simulator' }
     SimulatorLoadState  = @{ Required = @{ ApiUrl='SimulatorOrigin'; GatewayId='Text' }; Optional = @{}; Kind = 'Simulator' }
     SimulatorPlan       = @{ Required = @{ ApiUrl='SimulatorOrigin'; Baseline='Object'; Documents='Object'; OutputDirectory='Text' }; Optional = @{}; Kind = 'Simulator' }
@@ -93,6 +93,10 @@ function Confirm-WorkerOperationArguments {
                 }
             }
         }
+    }
+    if ($Operation -eq 'VcdRead' -and $Arguments.ContainsKey('CapabilitiesOnly') -and $Arguments.CapabilitiesOnly -and
+        ($Arguments.ConnectionOnly -or ($Arguments.ContainsKey('DiscoverOnly') -and $Arguments.DiscoverOnly))) {
+        throw [System.ArgumentException]::new('Capability preflight cannot be combined with other read modes.')
     }
     if ($Operation -eq 'VcdRead' -and $Arguments.ContainsKey('Credential') -and $null -ne $Arguments.Credential -and
         $Arguments.ContainsKey('BearerToken') -and $null -ne $Arguments.BearerToken) {

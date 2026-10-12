@@ -3,6 +3,7 @@
 Set-StrictMode -Version Latest
 Import-Module (Join-Path $PSScriptRoot '..\..\Infrastructure\VcdApi\VcdApi.psm1') -ErrorAction Stop
 Import-Module (Join-Path $PSScriptRoot '..\..\Domain\Access\VcdAuthorization.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\..\Domain\Capabilities\VcdCapabilityModel.psm1') -ErrorAction Stop
 
 function Get-VcdDiscoveryProperty {
     param($Value, [string]$Name)
@@ -31,6 +32,7 @@ function ConvertTo-VcdDiscoveryEntry {
         VdcId = $VdcId; GatewayId = $GatewayId; Type = $resourceType
         # Names never select resources. All relationships use immutable IDs.
         Label = ('{0} [{1}]' -f $name, $id)
+        Compatibility = $(if ($Type -eq 'Gateway') { New-VcdUnknownCapability -GatewayId $id } else { $null })
     }
 }
 

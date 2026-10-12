@@ -9,6 +9,8 @@ Import-Module (Join-Path $PSScriptRoot '..\..\Domain\State\VcdPolicyModel.psm1')
 Import-Module (Join-Path $PSScriptRoot '..\..\Infrastructure\State\VcdPolicyRepository.psm1') -ErrorAction Stop
 Import-Module (Join-Path $PSScriptRoot '..\..\Domain\Access\VcdAuthorization.psm1') -ErrorAction Stop
 Import-Module (Join-Path $PSScriptRoot '..\..\Domain\Access\VcdSessionLifecycle.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\..\Domain\Capabilities\VcdCapabilityEvaluation.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\..\Domain\Capabilities\VcdCapabilityModel.psm1') -ErrorAction Stop
 
 function Invoke-VcdReadOperation {
     [CmdletBinding(DefaultParameterSetName='Credential')]
@@ -26,6 +28,7 @@ function Invoke-VcdReadOperation {
         [string]$Scope,
         [switch]$ConnectionOnly,
         [switch]$DiscoverOnly,
+        [switch]$CapabilitiesOnly,
         [System.Threading.CancellationToken]$CancellationToken = [System.Threading.CancellationToken]::None
     )
     if ($null -ne $RequestSender -and $null -ne $HttpHandler) { throw 'Choose either an injected sender or an HTTP handler.' }
@@ -42,7 +45,8 @@ function Invoke-VcdReadOperation {
     }
     if (($WriteObserved -or $WritePolicyObserved) -and (-not $StateRoot -or -not $Environment -or -not $Scope)) { throw 'StateRoot, Environment and Scope are required for observed-state import.' }
     if (($WriteObserved -or $WritePolicyObserved) -and @($VcdConfiguration.networkIds).Count -eq 0) { throw 'Observed-state import requires one or more explicit network URNs; an unqueried reservation scope cannot be treated as empty.' }
-    if ($DiscoverOnly -and ($ConnectionOnly -or $WriteObserved -or $WritePolicyObserved)) { throw 'Discovery cannot be combined with connection-only or observed-state import.' }
+    if ($DiscoverOnly -and ($ConnectionOnly -or $WriteObserved -or $WritePolicyObserved -or $CapabilitiesOnly)) { throw 'Discovery cannot be combined with other read modes.' }
+    if ($CapabilitiesOnly -and ($ConnectionOnly -or $WriteObserved -or $WritePolicyObserved)) { throw 'Capability preflight cannot import or overwrite observed state.' }
     if ($ConnectionOnly -and ($WriteObserved -or $WritePolicyObserved)) { throw 'Connection-only cannot publish observed state.' }
     if (-not $ConnectionOnly -and -not $DiscoverOnly -and (-not $VcdConfiguration.gatewayId)) { throw 'Set vcd.gatewayId to an Edge Gateway URN before retrieving a snapshot.' }
     $transport = $null
@@ -55,7 +59,13 @@ function Invoke-VcdReadOperation {
         $client = New-VcdApiClient -BaseUri ([uri]$VcdConfiguration.apiUrl) -RequestSender $RequestSender -ApiVersion ([string]$VcdConfiguration.apiVersion) -AllowLoopbackHttp:$simulatorMode
         # /api/versions is unauthenticated. Never downgrade or guess API versions.
         $versions = @(Get-VcdApiVersions -Client $client -CancellationToken $CancellationToken)
-        if ($versions -notcontains [string]$VcdConfiguration.apiVersion) { throw "VCD server does not advertise required API version $($VcdConfiguration.apiVersion)." }
+        if ($versions -notcontains [string]$VcdConfiguration.apiVersion) {
+            if ($CapabilitiesOnly) {
+                $report=New-VcdUnknownCapability -GatewayId ([string]$VcdConfiguration.gatewayId) -Explanation 'The VCD server does not advertise the required tested API version; no compatibility is implied.'
+                return [pscustomobject]@{ Connected=$false; CapabilitiesAssessed=$true; ApiVersion=[string]$VcdConfiguration.apiVersion; IdentityLabel=''; Capability=$report; SnapshotPath=''; ObservedImported=$false }
+            }
+            throw "VCD server does not advertise required API version $($VcdConfiguration.apiVersion)."
+        }
         $trustedIdentity = $null
         $identityLabel = ''
         # Authentication errors are retried at the WHOLE read-operation boundary,
@@ -109,9 +119,11 @@ function Invoke-VcdReadOperation {
                     Confirm-VcdArtifactContainsNoSecrets -Value $inventory
                     return [pscustomobject]@{ Connected=$true; Discovered=$true; ApiVersion=$client.ApiVersion; IdentityLabel=$identityLabel; Inventory=$inventory; SnapshotPath=''; ObservedImported=$false }
                 }
+                $gatewayMetadata = $null
                 if (-not $simulatorMode) {
                     # Renewed credentials never skip the original resource ownership check.
                     $gateway = Get-VcdGatewayOwnership -Client $client -GatewayId ([string]$VcdConfiguration.gatewayId) -CancellationToken $CancellationToken
+                    $gatewayMetadata = $gateway
                     Confirm-VcdLiveAuthorization -Identity $identity -Action Read -ResourceId ([string]$VcdConfiguration.gatewayId) -Resource $gateway
                     foreach ($networkId in @($VcdConfiguration.networkIds)) {
                         $CancellationToken.ThrowIfCancellationRequested()
@@ -120,6 +132,22 @@ function Invoke-VcdReadOperation {
                     }
                 }
                 $snapshot = Get-VcdReadSnapshot -Client $client -GatewayId ([string]$VcdConfiguration.gatewayId) -NetworkIds @($VcdConfiguration.networkIds) -CancellationToken $CancellationToken
+                if ($CapabilitiesOnly) {
+                    $CancellationToken.ThrowIfCancellationRequested()
+                    $policy = $null
+                    try { $policy = ConvertTo-VcdPolicyDocument -Snapshot $snapshot }
+                    catch {
+                        $report=New-VcdUnknownCapability -GatewayId ([string]$VcdConfiguration.gatewayId) -Explanation 'The returned firewall policy could not be normalised safely; no compatibility was inferred.'
+                        return [pscustomobject]@{ Connected=$true; CapabilitiesAssessed=$true; ApiVersion=$client.ApiVersion; IdentityLabel=$identityLabel; Capability=$report; SnapshotPath=''; ObservedImported=$false }
+                    }
+                    $catalogue = Read-VcdCapabilityCatalogue -Path (Join-Path $PSScriptRoot '..\..\..\config\capabilities\vcd-10.6-api-39.0.json')
+                    $report = Get-VcdCapabilityAssessment -Catalogue $catalogue -GatewayId ([string]$VcdConfiguration.gatewayId) -ApiVersion ([string]$client.ApiVersion) -VersionAdvertised:$true -GatewayMetadata $gatewayMetadata -Policy $policy
+                    Confirm-VcdArtifactContainsNoSecrets -Value $report
+                    return [pscustomobject]@{
+                        Connected=$true; CapabilitiesAssessed=$true; ApiVersion=$client.ApiVersion
+                        IdentityLabel=$identityLabel; Capability=$report; SnapshotPath=''; ObservedImported=$false
+                    }
+                }
                 $CancellationToken.ThrowIfCancellationRequested()
                 break
             }
@@ -137,6 +165,12 @@ function Invoke-VcdReadOperation {
                 }
                 if ($retryable) {
                     throw 'VCD session reauthentication required. Sign in again and repeat the complete read.'
+                }
+                if ($CapabilitiesOnly -and ($reason -ceq 'VCD GET failed: HTTP 403.' -or
+                    $reason -ceq 'VCD GET failed: HTTP 429.' -or $reason -ceq 'VCD GET failed: HTTP 503.' -or
+                    $reason -match '^VCD authorisation denied: [A-Za-z .-]+\.$')) {
+                    $report = New-VcdUnknownCapability -GatewayId ([string]$VcdConfiguration.gatewayId) -Explanation 'Capability evidence is incomplete, inaccessible or temporarily unavailable; no supported verdict was inferred.'
+                    return [pscustomobject]@{ Connected=$true; CapabilitiesAssessed=$true; ApiVersion=$client.ApiVersion; IdentityLabel=$identityLabel; Capability=$report; SnapshotPath=''; ObservedImported=$false }
                 }
                 if ($reason -ceq 'VCD GET failed: HTTP 403.') {
                     throw 'VCD access forbidden. Confirm your permissions and tenant; no automatic retry was attempted.'
@@ -161,6 +195,11 @@ function Invoke-VcdReadOperation {
                 # Legacy v2 remains deliberately strict. On failure the old v2
                 # observed directory is untouched; the v3 policy and raw snapshot
                 # remain available for inspection and diagnosis.
+                if (-not $simulatorMode) {
+                    $catalogue = Read-VcdCapabilityCatalogue -Path (Join-Path $PSScriptRoot '..\..\..\config\capabilities\vcd-10.6-api-39.0.json')
+                    $assessment = Get-VcdCapabilityAssessment -Catalogue $catalogue -GatewayId ([string]$VcdConfiguration.gatewayId) -ApiVersion ([string]$client.ApiVersion) -VersionAdvertised:$true -GatewayMetadata $gatewayMetadata -Policy $policy
+                    $null = Confirm-VcdCapabilityProjection -Assessment $assessment
+                }
                 $docs = ConvertTo-VcdLegacyPolicyProjection -Policy $policy
                 $CancellationToken.ThrowIfCancellationRequested()
                 $null = Publish-VcdObservedView -Documents $docs -StateRoot $StateRoot -Environment $Environment -Scope $Scope

@@ -59,6 +59,8 @@ function New-VcdDiscoverySelectionForm {
     $notice=[System.Windows.Forms.Label]::new();$notice.Dock='Fill';$notice.AutoEllipsis=$true
     $notice.Text='Permission-scoped listing: absence does not prove an object does not exist.'
     $count=[System.Windows.Forms.Label]::new();$count.Dock='Fill';$count.AutoEllipsis=$true
+    $count.Name='DiscoveryCompatibilityStatus'
+    $count.Text='Gateway compatibility: Unknown — select a gateway and use Check compatibility.'
     $cancel=[System.Windows.Forms.Button]::new();$cancel.Name='DiscoveryCancelButton';$cancel.Text='Cancel';$cancel.Dock='Fill';$cancel.DialogResult='Cancel'
     $accept=[System.Windows.Forms.Button]::new();$accept.Name='DiscoverySelectButton';$accept.Text='Use selection';$accept.Dock='Fill';$accept.Enabled=$false
     $footer.Controls.Add($notice,0,0);$footer.SetColumnSpan($notice,3)
@@ -97,7 +99,7 @@ function New-VcdDiscoverySelectionForm {
                 [void]$networks.Items.Add([string]$network.Label, $true)
             }
         }
-        $count.Text=('Visible: {0} organisations, {1} VDCs, {2} gateways; {3} attached networks' -f @($Inventory.Organisations).Count,@($Inventory.Vdcs).Count,@($Inventory.Gateways).Count,$networks.Items.Count)
+        $count.Text=('Compatibility: Unknown (not assessed); {0} VDCs, {1} gateways, {2} networks; {3} organisations' -f @($Inventory.Vdcs).Count,@($Inventory.Gateways).Count,$networks.Items.Count,@($Inventory.Organisations).Count)
         $accept.Enabled=($null -ne $selectedGateway)
     }.GetNewClosure()
     $refreshGateways = {

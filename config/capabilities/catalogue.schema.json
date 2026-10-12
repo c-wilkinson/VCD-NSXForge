@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VCD-NSXForge capability catalogue v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "catalogueSchemaVersion",
+    "catalogueId",
+    "toolCompatibility",
+    "testedVcdRelease",
+    "apiVersion",
+    "gatewayMode",
+    "networkBacking",
+    "observedPolicySchemaVersion",
+    "supportedReads",
+    "policySections",
+    "readFidelity",
+    "legacyV2Projection",
+    "liveWriteSupported",
+    "evidence",
+    "limitations"
+  ],
+  "properties": {
+    "catalogueSchemaVersion": {
+      "const": 1
+    },
+    "catalogueId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "toolCompatibility": {
+      "type": "string",
+      "minLength": 1
+    },
+    "testedVcdRelease": {
+      "type": "string",
+      "minLength": 1
+    },
+    "apiVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$"
+    },
+    "gatewayMode": {
+      "type": "string",
+      "minLength": 1
+    },
+    "networkBacking": {
+      "type": "string",
+      "minLength": 1
+    },
+    "observedPolicySchemaVersion": {
+      "const": 3
+    },
+    "supportedReads": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "policySections": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "readFidelity": {
+      "const": "lossless-raw-and-v3"
+    },
+    "legacyV2Projection": {
+      "const": "validated-subset-only"
+    },
+    "liveWriteSupported": {
+      "const": false
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -2,6 +2,7 @@
 [CmdletBinding(DefaultParameterSetName='Credential')]
 param(
     [switch]$ConnectionOnly,
+    [switch]$CapabilitiesOnly,
     [switch]$WriteObserved,
     [string]$Environment = '',
     [string]$Scope = '',
@@ -23,6 +24,7 @@ $params = @{
     Environment = $Environment
     Scope = $Scope
     ConnectionOnly = $ConnectionOnly
+    CapabilitiesOnly = $CapabilitiesOnly
     WriteObserved = $WriteObserved
 }
 if ($cfg.vcd.PSObject.Properties.Name -contains 'mode' -and $cfg.vcd.mode -eq 'Simulator') {
@@ -44,4 +46,9 @@ else {
     $params.Credential = $Credential
 }
 $result = Invoke-VcdReadOperation @params
-$result | Format-List
+if ($CapabilitiesOnly) {
+    # Pure stdout report: no remote mutations or local state/report writes.
+    $result.Capability | ConvertTo-Json -Depth 40
+} else {
+    $result | Format-List
+}

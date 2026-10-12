@@ -1,0 +1,38 @@
+{
+  "catalogueSchemaVersion": 1,
+  "catalogueId": "vcd-nsxforge-vcd106-api39-baseline-1",
+  "toolCompatibility": "source-01d6df9+issue9",
+  "testedVcdRelease": "10.6",
+  "apiVersion": "39.0",
+  "gatewayMode": "NSXT_BACKED",
+  "networkBacking": "NSX_T",
+  "observedPolicySchemaVersion": 3,
+  "supportedReads": [
+    "/api/versions",
+    "/cloudapi/1.0.0/sessions/current",
+    "/cloudapi/1.0.0/edgeGateways/{id}",
+    "/cloudapi/2.0.0/edgeGateways/{id}/firewall/rules",
+    "/cloudapi/1.0.0/firewallGroups/summaries",
+    "/cloudapi/1.0.0/firewallGroups/{id}",
+    "/cloudapi/1.0.0/manualIpReservations"
+  ],
+  "policySections": [
+    "systemRules",
+    "userDefinedRules",
+    "defaultRules"
+  ],
+  "readFidelity": "lossless-raw-and-v3",
+  "legacyV2Projection": "validated-subset-only",
+  "liveWriteSupported": false,
+  "evidence": [
+    "tests/Fixtures/Vcd106",
+    "tests/Unit/VcdCapabilities.Tests.ps1",
+    "tests/Integration/VcdCapabilityPreflight.Tests.ps1"
+  ],
+  "limitations": [
+    "VCD release and gateway backing must be explicitly attested in metadata; API 39.0 alone is insufficient.",
+    "VCD 10.6 patch/build and actual NSX feature coverage require an isolated integration environment.",
+    "Unsupported and novel policy fields are inspectable in raw/v3 form, never automatically editable.",
+    "Production changes remain disabled in all cases."
+  ]
+}

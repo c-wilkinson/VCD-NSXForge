@@ -18,7 +18,7 @@ function New-FakeVcdReadSender {
             '^/api/versions$' { return $versions }
             '^/cloudapi/1.0.0/sessions/current$' { return [pscustomobject]@{ id='urn:vcloud:session:demo'; user='engineer'; orgRef=[pscustomobject]@{ id='urn:vcloud:org:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } } }
             '^/cloudapi/1.0.0/edgeGateways/[^/]+$' {
-                return [pscustomobject]@{ id='urn:vcloud:gateway:55555555-5555-4555-8555-555555555555'; orgRef=[pscustomobject]@{id='urn:vcloud:org:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'} }
+                return [pscustomobject]@{ id='urn:vcloud:gateway:55555555-5555-4555-8555-555555555555'; vcdVersion='10.6'; gatewayMode='NSXT_BACKED'; networkBacking='NSX_T'; orgRef=[pscustomobject]@{id='urn:vcloud:org:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'} }
             }
             '^/cloudapi/1.0.0/orgVdcNetworks/[^/]+$' {
                 return [pscustomobject]@{ id='urn:vcloud:network:44444444-4444-4444-8444-444444444444'; orgRef=[pscustomobject]@{id='urn:vcloud:org:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'} }
