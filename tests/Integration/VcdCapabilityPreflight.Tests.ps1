@@ -100,3 +100,40 @@ Invoke-TestCase -Name 'Capability preflight reports rate limiting and service fa
         Assert-True (-not [IO.Directory]::Exists($root))
     }
 }
+
+Invoke-TestCase -Name 'Enterprise simulator preflight reads synthetic metadata and reports known advanced port limits' -Body {
+    Import-Module (Join-Path $ProjectRoot 'src\Infrastructure\Simulator\SimulatorServer.psm1') -ErrorAction Stop
+    Import-Module (Join-Path $ProjectRoot 'src\Application\Configuration\Configuration.psm1') -ErrorAction Stop
+    $data=Import-SimulatorTopology -Path (Join-Path $ProjectRoot 'simulator\scenarios\enterprise-lab\topology.json')
+    $gw=@($data.gateways | Where-Object { $_.domain -eq 'DomainB' -and $_.tier -eq 1 })[0]
+    $route=Get-Command Invoke-SimulatorRoute
+    $sender={
+        param($request)
+        $uri=[uri]$request.Uri;$query=@{}
+        if ($uri.Query) {
+            foreach ($pair in $uri.Query.TrimStart('?').Split('&')) {
+                $part=$pair.Split('=',2)
+                $query[[uri]::UnescapeDataString($part[0])]=if ($part.Count -gt 1) { [uri]::UnescapeDataString($part[1]) } else { '' }
+            }
+        }
+        if ($request.Method -cne 'GET') { throw 'Simulator preflight must remain GET-only.' }
+        $result=& $route -Dataset $data -Method $request.Method -Path $uri.AbsolutePath -Query $query -Authorization 'Bearer simulator-read-only'
+        if ($result.StatusCode -ne 200) { throw ('Synthetic HTTP '+$result.StatusCode) }
+        if ($result.Body -is [string]) { return $result.Body }
+        return ($result.Body | ConvertTo-Json -Depth 40 -Compress | ConvertFrom-Json)
+    }.GetNewClosure()
+    $cfg=(Read-AppConfiguration -ApplicationRoot $ProjectRoot).vcd
+    $cfg.mode='Simulator';$cfg.apiUrl='http://127.0.0.1:8765'
+    $cfg.gatewayId=$gw.gatewayId;$cfg.networkIds=@($gw.networkId)
+    $tmp=Join-Path ([IO.Path]::GetTempPath()) ('sim-cap-'+[guid]::NewGuid().ToString('n'))
+    $result=Invoke-VcdReadOperation -VcdConfiguration $cfg -OutputDirectory $tmp -RequestSender $sender -CapabilitiesOnly
+    Assert-Equal 'Partial' $result.Capability.Verdict
+    Assert-Equal '10.6' $result.Capability.VcdRelease
+    Assert-Equal 'NSXT_BACKED' $result.Capability.GatewayMode
+    Assert-Equal 'NSX_T' $result.Capability.NetworkBacking
+    Assert-True (@($result.Capability.Findings | Where-Object { $_.Path -like '*.rawPortProtocols' }).Count -gt 0)
+    Assert-Equal 0 (@($result.Capability.Findings | Where-Object { $_.Code -in @('RELEASE_UNKNOWN','MODE_UNKNOWN','BACKING_UNKNOWN','UNKNOWN_POLICY_FIELD') }).Count)
+    Assert-True (-not $result.Capability.CanProjectToV2)
+    Assert-True (-not $result.Capability.CanApply)
+    Assert-True (-not [IO.Directory]::Exists($tmp))
+}

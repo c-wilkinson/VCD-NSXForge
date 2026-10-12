@@ -103,7 +103,7 @@ try {
             Write-AppLog -Logger $Logger -Component 'VcdRead' -Level 'INFO' -OperationId $OperationId -Message $summary.LogMessage
             Send-WorkerProgress -Message $summary.ProgressMessage -Percent 100
         }
-        { $_ -in @('SimulatorScopes','SimulatorLoadState','SimulatorPlan','SimulatorApply','SimulatorTraffic','SimulatorSaveDraft') } {
+        { $_ -in @('SimulatorScopes','SimulatorLoadState','SimulatorPlan','SimulatorApply','SimulatorTraffic','SimulatorTrafficRead','SimulatorSaveDraft') } {
             Import-Module (Join-Path $ApplicationRoot 'src\Application\Simulator\SimulatorClient.psm1') -ErrorAction Stop
             $CancellationToken.ThrowIfCancellationRequested()
             Send-WorkerProgress -Message 'Working with local synthetic simulator' -Percent 15
@@ -135,6 +135,11 @@ try {
                     $committed=$true
                     $description='Synthetic deployment revision '+$result.revision
                     $payload=[pscustomobject]@{Message=$description;Result=$result};$name='Apply'
+                }
+                'SimulatorTrafficRead' {
+                    $history=Invoke-SimulatorApi -ApiUrl $url -Method GET -Resource traffic -GatewayId ([string]$Arguments.GatewayId) -CancellationToken $CancellationToken
+                    $payload=[pscustomobject]@{Events=@($history.events)}
+                    $name='TrafficHistory';$description='Synthetic traffic history refreshed'
                 }
                 'SimulatorTraffic' {
                     $request=[pscustomobject]@{gatewayId=[string]$Arguments.GatewayId;sourceIp=[string]$Arguments.SourceIp;destinationIp=[string]$Arguments.DestinationIp;protocol=[string]$Arguments.Protocol;destinationPort=[int]$Arguments.DestinationPort}

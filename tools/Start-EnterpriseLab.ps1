@@ -10,13 +10,16 @@
 [CmdletBinding()]
 param(
     [ValidateRange(1024,65535)][int]$Port = 8765,
-    [switch]$ResetState
+    [switch]$ResetState,
+    [switch]$NoTraffic,
+    [ValidateRange(1,60)][int]$TrafficIntervalSeconds = 2
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $scenario = Join-Path $root 'simulator\scenarios\enterprise-lab\topology.json'
 $runtime = Join-Path $root 'simulator\runtime-state.json.enterprise-lab'
+$trafficCases = Join-Path $root 'simulator\scenarios\enterprise-lab\flow-cases.json'
 if (-not [IO.File]::Exists($scenario)) { throw "Enterprise scenario was not found at $scenario" }
 if ($ResetState -and [IO.File]::Exists($runtime)) {
     $stamp = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
@@ -29,4 +32,10 @@ Import-Module (Join-Path $root 'src\Infrastructure\Simulator\SimulatorServer.psm
 Write-Host 'Enterprise lab: synthetic DomainA/B/C, Tier 0/1, SQL FCI, RDS, MCM, SCM, ADO' -ForegroundColor Cyan
 Write-Host "Scenario: $scenario" -ForegroundColor DarkCyan
 Write-Host "Persistent edits: $runtime" -ForegroundColor DarkCyan
-Start-VcdSimulatorServer -TopologyPath $scenario -Port $Port -PersistencePath $runtime
+$trafficMode = if ($NoTraffic) { 'disabled' } else { "enabled every $TrafficIntervalSeconds seconds" }
+Write-Host "Synthetic background traffic: $trafficMode (32 curated flows; all six gateways)" -ForegroundColor Cyan
+if ($NoTraffic) {
+    Start-VcdSimulatorServer -TopologyPath $scenario -Port $Port -PersistencePath $runtime
+} else {
+    Start-VcdSimulatorServer -TopologyPath $scenario -Port $Port -PersistencePath $runtime -TrafficCasesPath $trafficCases -TrafficIntervalSeconds $TrafficIntervalSeconds
+}

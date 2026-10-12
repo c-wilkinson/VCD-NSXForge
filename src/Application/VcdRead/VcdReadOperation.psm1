@@ -120,6 +120,9 @@ function Invoke-VcdReadOperation {
                     return [pscustomobject]@{ Connected=$true; Discovered=$true; ApiVersion=$client.ApiVersion; IdentityLabel=$identityLabel; Inventory=$inventory; SnapshotPath=''; ObservedImported=$false }
                 }
                 $gatewayMetadata = $null
+                if ($simulatorMode -and $CapabilitiesOnly) {
+                    $gatewayMetadata = Get-VcdGatewayOwnership -Client $client -GatewayId ([string]$VcdConfiguration.gatewayId) -CancellationToken $CancellationToken
+                }
                 if (-not $simulatorMode) {
                     # Renewed credentials never skip the original resource ownership check.
                     $gateway = Get-VcdGatewayOwnership -Client $client -GatewayId ([string]$VcdConfiguration.gatewayId) -CancellationToken $CancellationToken

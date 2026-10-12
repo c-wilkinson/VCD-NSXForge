@@ -7,7 +7,7 @@ Invoke-TestCase -Name 'VCD read operation contract recognises isolated read-only
 }
 Invoke-TestCase -Name 'Every published worker operation has a single, unique definition' -Body {
     $definitions = @(Get-WorkerOperationDefinitions)
-    Assert-Equal 11 $definitions.Count
+    Assert-Equal 12 $definitions.Count
     Assert-Equal $definitions.Count (@($definitions.Name | Sort-Object -Unique).Count)
     foreach ($definition in $definitions) {
         Assert-True ($definition.Kind -in @('Demo','Offline','ReadOnly','Simulator')) "Unknown operation mode $($definition.Name)"
@@ -61,6 +61,7 @@ Invoke-TestCase -Name 'Contract rejects unsupported operation and malformed argu
     Assert-Throws { Confirm-WorkerOperationArguments -Operation SimulatorScopes -Arguments @{ApiUrl='https://production.example:443'} } 'Live endpoints cannot be used for simulator operations'
     Assert-Throws { Confirm-WorkerOperationArguments -Operation SimulatorScopes -Arguments @{ApiUrl='http://localhost:12000'} } 'Simulator host is strictly 127.0.0.1'
     Assert-Throws { Confirm-WorkerOperationArguments -Operation SimulatorScopes -Arguments @{ApiUrl='http://127.0.0.1:12000/path'} } 'Simulator URL path is forbidden'
+    Confirm-WorkerOperationArguments -Operation SimulatorTrafficRead -Arguments @{ApiUrl='http://127.0.0.1:12000';GatewayId='urn:vcloud:gateway:11111111-1111-4111-8111-111111111111'}
     Confirm-WorkerOperationArguments -Operation SimulatorScopes -Arguments @{ApiUrl='http://127.0.0.1:12000'}
     Confirm-WorkerOperationArguments -Operation VcdRead -Arguments @{VcdConfiguration=[pscustomobject]@{};OutputDirectory='reports';ConnectionOnly=$true}
 }

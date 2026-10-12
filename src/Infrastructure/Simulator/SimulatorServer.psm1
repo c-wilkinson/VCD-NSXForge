@@ -20,6 +20,88 @@ function Get-SimulatorPage {
     [pscustomobject]@{ page=$Page; pageSize=$PageSize; pageCount=$pages; resultTotal=$total; values=@($values) }
 }
 
+# Convert private simulator rule properties into the documented API 39.0
+# firewall response shape. Never pass simulatorServices to live policy readers.
+# The internal simulator workspace retains the original service list so local
+# edits and first-match traffic decisions continue to use the same model.
+function Get-SimulatorVcdFirewall {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Gateway)
+    $rules=@()
+    foreach ($rule in @($Gateway.firewall.userDefinedRules)) {
+        $fields=[ordered]@{}
+        foreach ($prop in @($rule.PSObject.Properties)) {
+            if ($prop.Name -cne 'simulatorServices') { $fields[$prop.Name]=$prop.Value }
+        }
+        if ($null -ne $rule.PSObject.Properties['simulatorServices']) {
+            $profiles=@()
+            foreach ($service in @($rule.simulatorServices)) {
+                if ([string]$service.protocol -eq 'ANY') { continue }
+                $profiles+= [pscustomobject]@{protocol=[string]$service.protocol;ports=(@($service.ports) -join ',')}
+            }
+            if ($profiles.Count -gt 0) { $fields['rawPortProtocols']=@($profiles) }
+        }
+        $rules+= [pscustomobject]$fields
+    }
+    return [pscustomobject]@{
+        status=[string]$Gateway.firewall.status
+        systemRules=@($Gateway.firewall.systemRules)
+        userDefinedRules=@($rules)
+        defaultRules=@($Gateway.firewall.defaultRules)
+    }
+}
+
+# A stable, bounded stream of fictional flows. Each tick advances through the
+# curated enterprise cases, so repeated runs and tests are reproducible.
+# Traffic is evaluated against CURRENT simulated firewall rules; a changed
+# rule changes subsequent outcomes. No packets are sent anywhere.
+function New-SimulatorTrafficSchedule {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Dataset,[Parameter(Mandatory)][string]$CasesPath)
+    $data=Get-Content -LiteralPath $CasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($data.schemaVersion -ne 1 -or $data.synthetic -ne $true -or @($data.cases).Count -lt 1 -or @($data.cases).Count -gt 256) {
+        throw 'Invalid synthetic background traffic fixture.'
+    }
+    $known=@{}; foreach ($gw in @($Dataset.gateways)) { $known[[string]$gw.gatewayId]=$true }
+    # Interleave gateways: samples from every domain/tier appear promptly, even
+    # though the fixture contains more DomainB Tier 1 traffic than others.
+    $groups=[ordered]@{}
+    foreach ($case in @($data.cases)) {
+        if (-not $known.ContainsKey([string]$case.gatewayId) -or
+            [string]$case.protocol -cnotin @('TCP','UDP','ICMP') -or
+            [int]$case.destinationPort -lt 0 -or [int]$case.destinationPort -gt 65535) {
+            throw 'Background traffic fixture refers to an invalid gateway or service.'
+        }
+        $id=[string]$case.gatewayId
+        if (-not $groups.Contains($id)) { $groups[$id]=[System.Collections.Generic.List[object]]::new() }
+        $groups[$id].Add($case)
+    }
+    $ordered=[System.Collections.Generic.List[object]]::new()
+    $max=0; foreach ($group in $groups.Values) { $max=[Math]::Max($max,$group.Count) }
+    for ($i=0; $i -lt $max; $i++) {
+        foreach ($group in $groups.Values) { if ($i -lt $group.Count) { $ordered.Add($group[$i]) } }
+    }
+    return [pscustomobject]@{cases=@($ordered.ToArray());index=0;generated=0}
+}
+
+function Invoke-SimulatorTrafficTick {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Dataset,[Parameter(Mandatory)]$Schedule)
+    if (@($Schedule.cases).Count -eq 0) { throw 'Background traffic schedule is empty.' }
+    $case=$Schedule.cases[[int]$Schedule.index]
+    $request=[pscustomobject]@{
+        gatewayId=[string]$case.gatewayId
+        sourceIp=[string]$case.sourceIp
+        destinationIp=[string]$case.destinationIp
+        protocol=[string]$case.protocol
+        destinationPort=[int]$case.destinationPort
+    }
+    $result=Invoke-SimulatorTraffic -Dataset $Dataset -Request $request
+    $Schedule.index=([int]$Schedule.index+1) % @($Schedule.cases).Count
+    $Schedule.generated=[int]$Schedule.generated+1
+    return $result
+}
+
 function Invoke-SimulatorRoute {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Dataset,
@@ -101,7 +183,7 @@ function Invoke-SimulatorRoute {
             }
             '/cloudapi/1.0.0/edgeGateways' {
                 $items = @($Dataset.gateways | ForEach-Object {
-                    [pscustomobject]@{id=$_.gatewayId;name=$_.name;orgRef=$orgRef;orgVdc=[pscustomobject]@{id=('urn:vcloud:vdc:{0}' -f $_.gatewayId.Substring($_.gatewayId.LastIndexOf(':')+1))}}
+                    [pscustomobject]@{id=$_.gatewayId;name=$_.name;vcdVersion='10.6';gatewayMode='NSXT_BACKED';networkBacking='NSX_T';synthetic=$true;orgRef=$orgRef;orgVdc=[pscustomobject]@{id=('urn:vcloud:vdc:{0}' -f $_.gatewayId.Substring($_.gatewayId.LastIndexOf(':')+1))}}
                 })
             }
             '/cloudapi/1.0.0/orgVdcNetworks' {
@@ -119,13 +201,24 @@ function Invoke-SimulatorRoute {
         if ($null -eq $result) { return New-SimulatorResult -StatusCode 400 -Body @{error='Invalid discovery pagination'} }
         return New-SimulatorResult -Body $result
     }
+    if ($Path -cmatch '^/cloudapi/1\.0\.0/edgeGateways/([^/]+)$') {
+        $id=[uri]::UnescapeDataString($matches[1])
+        $matched=@($Dataset.gateways | Where-Object { $_.gatewayId -ceq $id })
+        if ($matched.Count -ne 1) { return New-SimulatorResult -StatusCode 404 -Body @{error='Synthetic gateway not found'} }
+        $org=[pscustomobject]@{id='urn:vcloud:org:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'}
+        return New-SimulatorResult -Body ([pscustomobject]@{
+            id=$id;name=[string]$matched[0].name;vcdVersion='10.6';gatewayMode='NSXT_BACKED';networkBacking='NSX_T'
+            synthetic=$true;orgRef=$org
+            orgVdc=[pscustomobject]@{id=('urn:vcloud:vdc:{0}' -f $id.Substring($id.LastIndexOf(':')+1))}
+        })
+    }
     if ($Path -ceq '/cloudapi/1.0.0/sessions/current') {
         return New-SimulatorResult -Body @{id='urn:vcloud:session:simulator';user='simulator@local';org='simulator';orgRef=[pscustomobject]@{id='urn:vcloud:org:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'};synthetic=$true}
     }
     if ($Path -cmatch '^/cloudapi/2\.0\.0/edgeGateways/([^/]+)/firewall/rules$') {
         $id = [uri]::UnescapeDataString($matches[1]); $gateway = @($Dataset.gateways | Where-Object { $_.gatewayId -ceq $id })
         if ($gateway.Count -ne 1) { return New-SimulatorResult -StatusCode 404 -Body @{error='Synthetic gateway not found'} }
-        return New-SimulatorResult -Body $gateway[0].firewall
+        return New-SimulatorResult -Body (Get-SimulatorVcdFirewall -Gateway $gateway[0])
     }
     if ($Path -ceq '/cloudapi/1.0.0/firewallGroups/summaries') {
         if (-not $Query.ContainsKey('filter')) { return New-SimulatorResult -StatusCode 400 -Body @{error='Missing gateway filter'} }
@@ -166,9 +259,16 @@ function Start-VcdSimulatorServer {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$TopologyPath,
           [ValidateRange(1024,65535)][int]$Port=8765,
-          [string]$PersistencePath='')
+          [string]$PersistencePath='',
+          [string]$TrafficCasesPath='',
+          [ValidateRange(1,60)][int]$TrafficIntervalSeconds=2)
     $dataset = Import-SimulatorTopology -Path $TopologyPath
     $null = Initialize-SimulatorWorkspace -Dataset $dataset -PersistencePath $PersistencePath
+    $trafficSchedule=$null
+    if ($TrafficCasesPath) {
+        $trafficSchedule=New-SimulatorTrafficSchedule -Dataset $dataset -CasesPath $TrafficCasesPath
+    }
+    $nextTraffic=[DateTime]::UtcNow.AddSeconds($TrafficIntervalSeconds)
     $listener = [System.Net.HttpListener]::new()
     $listener.Prefixes.Add(('http://127.0.0.1:{0}/' -f $Port))
     try {
@@ -178,9 +278,22 @@ function Start-VcdSimulatorServer {
         }
         Write-Host ("Synthetic VCD 10.6 API simulator at http://127.0.0.1:{0}/" -f $Port) -ForegroundColor Cyan
         Write-Host 'Local synthetic edits enabled only via /__simulator/v1/apply. No actual VMware/AD changes. Press Ctrl+C to stop.'
+        if ($null -ne $trafficSchedule) { Write-Host ('Synthetic traffic generator running every {0}s; monitoring GET remains read-only.' -f $TrafficIntervalSeconds) -ForegroundColor Cyan }
         while ($listener.IsListening) {
             $pending = $listener.BeginGetContext($null, $null)
-            while (-not $pending.AsyncWaitHandle.WaitOne(250)) { }
+            while (-not $pending.AsyncWaitHandle.WaitOne(250)) {
+                if ($null -ne $trafficSchedule -and [DateTime]::UtcNow -ge $nextTraffic) {
+                    try { $null=Invoke-SimulatorTrafficTick -Dataset $dataset -Schedule $trafficSchedule }
+                    catch { Write-Warning 'Synthetic traffic generation failed; monitoring stays available.' }
+                    $nextTraffic=[DateTime]::UtcNow.AddSeconds($TrafficIntervalSeconds)
+                }
+            }
+            # Requests arriving continuously must not starve the generator.
+            if ($null -ne $trafficSchedule -and [DateTime]::UtcNow -ge $nextTraffic) {
+                try { $null=Invoke-SimulatorTrafficTick -Dataset $dataset -Schedule $trafficSchedule }
+                catch { Write-Warning 'Synthetic traffic generation failed; monitoring stays available.' }
+                $nextTraffic=[DateTime]::UtcNow.AddSeconds($TrafficIntervalSeconds)
+            }
             $context = $listener.EndGetContext($pending)
             try {
                 $result = $null
@@ -231,4 +344,4 @@ function Start-VcdSimulatorServer {
     finally { if ($listener.IsListening) { $listener.Stop() }; $listener.Close() }
 }
 
-Export-ModuleMember -Function Invoke-SimulatorRoute, Start-VcdSimulatorServer
+Export-ModuleMember -Function Invoke-SimulatorRoute, Start-VcdSimulatorServer, Get-SimulatorVcdFirewall, New-SimulatorTrafficSchedule, Invoke-SimulatorTrafficTick

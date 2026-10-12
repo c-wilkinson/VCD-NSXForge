@@ -83,7 +83,7 @@ function New-NetworkEditorForm {
     $userTemplatePath=Join-Path $Configuration.ApplicationRoot 'templates\user-firewall-rules.json'
     $templates=@(& $commands.Templates -Path $templatePath -AdditionalPath $userTemplatePath)
     $dispatcher=New-WorkerDispatcher -ApplicationRoot $Configuration.ApplicationRoot -Logger $Logger -MaximumWorkers 2
-    $model=[pscustomobject]@{Scopes=@();GatewayId=[string]$Configuration.vcd.gatewayId;Baseline=$null;Documents=$null;CurrentList=@();Approved=$null;Active='';LastOperation='';Closing=$false;SuppressScopeChange=$false;PendingGateway='';Dirty=$false;CancelRequested=$false}
+    $model=[pscustomobject]@{NextTrafficPoll=[DateTime]::UtcNow;Scopes=@();GatewayId=[string]$Configuration.vcd.gatewayId;Baseline=$null;Documents=$null;CurrentList=@();Approved=$null;Active='';LastOperation='';Closing=$false;SuppressScopeChange=$false;PendingGateway='';Dirty=$false;CancelRequested=$false}
     $form=[System.Windows.Forms.Form]::new();$form.Name='NetworkEditorForm';$form.Text='VCD-NSXForge | Synthetic Network Editor';$form.StartPosition='CenterParent'
     $form.ClientSize=[System.Drawing.Size]::new(1040,740);$form.MinimumSize=[System.Drawing.Size]::new(1020,670)
     $form.Font=[System.Drawing.Font]::new('Segoe UI',9)
@@ -166,9 +166,10 @@ function New-NetworkEditorForm {
     $dst=[System.Windows.Forms.TextBox]::new();$dst.Name='FlowDestination';$dst.SetBounds(212,28,180,28);$dst.Text='10.50.20.11'
     $protocol=[System.Windows.Forms.ComboBox]::new();$protocol.Name='FlowProtocol';$protocol.DropDownStyle='DropDownList';$protocol.Items.AddRange([object[]]@('TCP','UDP','ICMP'));$protocol.SelectedIndex=0;$protocol.SetBounds(406,28,100,28)
     $port=[System.Windows.Forms.NumericUpDown]::new();$port.Name='FlowPort';$port.Minimum=1;$port.Maximum=65535;$port.Value=443;$port.SetBounds(520,28,93,28)
+    $trafficHint=[System.Windows.Forms.Label]::new();$trafficHint.Name='TrafficAutoRefreshLabel';$trafficHint.Text='Live synthetic traffic - refreshes every 2 seconds';$trafficHint.SetBounds(778,30,210,26);$trafficHint.Anchor='Top,Right'
     $sendFlow=[System.Windows.Forms.Button]::new();$sendFlow.Name='SimulateFlowButton';$sendFlow.Text='Simulate flow';$sendFlow.SetBounds(635,27,134,30)
     $flowHistory=[System.Windows.Forms.ListBox]::new();$flowHistory.Name='TrafficEvents';$flowHistory.SetBounds(18,75,951,355);$flowHistory.Anchor='Top,Left,Right,Bottom';$flowHistory.Font=[System.Drawing.Font]::new('Consolas',9);$flowHistory.AccessibleName='Synthetic traffic history';$flowHistory.AccessibleDescription='Most recent simulated flows, verdict and matching firewall rule'
-    $trafficPage.Controls.AddRange([System.Windows.Forms.Control[]]@($src,$dst,$protocol,$port,$sendFlow,$flowHistory));[void]$tabs.TabPages.Add($trafficPage)
+    $trafficPage.Controls.AddRange([System.Windows.Forms.Control[]]@($src,$dst,$protocol,$port,$sendFlow,$flowHistory,$trafficHint));[void]$tabs.TabPages.Add($trafficPage)
     # Navigate from the landing dashboard without loading a separate implementation.
     $initialPages = @{ edgeFirewallRules = $pages['edgeFirewallRules'].Page; ipSets = $pages['ipSets'].Page; manualIpReservations = $pages['manualIpReservations'].Page; plan = $planPage; traffic = $trafficPage }
     $tabs.SelectedTab = $initialPages[$InitialTab]
@@ -238,8 +239,10 @@ function New-NetworkEditorForm {
             $model.Active=& $commands.Start -Dispatcher $dispatcher -Operation $name -Arguments $parameters
             $model.CancelRequested=$false
             $model.LastOperation=$name
-            $cancel.Enabled=$true
-            $status.Text="Working on background runspace: $name"
+            $cancel.Enabled=($name -ne 'SimulatorTrafficRead')
+            if ($name -ne 'SimulatorTrafficRead') { $status.Text="Working on background runspace: $name" }
+            # Even brief read-only polls must prevent scope changes; otherwise
+            # a scope switch could lose its state-load request while polling.
             $refresh.Enabled=$false;$plan.Enabled=$false;$apply.Enabled=$false;$draft.Enabled=$false;$scope.Enabled=$false
             foreach ($resourceType in @('edgeFirewallRules','ipSets','manualIpReservations')) { foreach ($b in $pages[$resourceType].Buttons) { $b.Enabled=$false } }
         }
@@ -460,6 +463,12 @@ function New-NetworkEditorForm {
                         & $render
                     }
                     'Apply' { $model.Approved=$null;$report.Text='Synthetic apply succeeded. '+$evt.Payload.Message }
+                    'TrafficHistory' {
+                        $flowHistory.Items.Clear()
+                        foreach ($traffic in @($evt.Payload.Events | Sort-Object timestampUtc -Descending)) {
+                            [void]$flowHistory.Items.Add(('{0} {1} {2}:{3} -> {4}:{5} | {6}' -f $traffic.timestampUtc,$traffic.verdict,$traffic.sourceIp,$traffic.protocol,$traffic.destinationIp,$traffic.destinationPort,$traffic.matchedRuleName))
+                        }
+                    }
                     'Traffic' {
                         $flowHistory.Items.Clear()
                         foreach ($traffic in @($evt.Payload.Events | Sort-Object timestampUtc -Descending)) {
@@ -479,12 +488,20 @@ function New-NetworkEditorForm {
                 if ($null -ne $model.Documents) { & $render }
                 if ($evt.Type -eq 'Failed') { $status.Text='ERROR: '+$evt.Message }
                 elseif ($evt.Type -eq 'Cancelled') { $status.Text='Operation cancelled' }
-                else { $status.Text='Completed: '+$old }
+                elseif ($old -ne 'SimulatorTrafficRead') { $status.Text='Completed: '+$old }
                 if ($evt.Type -eq 'Completed' -and $old -eq 'SimulatorScopes' -and $model.PendingGateway) {
                     $gateway=$model.PendingGateway;$model.PendingGateway=''; & $start 'SimulatorLoadState' @{GatewayId=$gateway}
                 }
                 if ($evt.Type -eq 'Completed' -and $old -eq 'SimulatorApply') { & $start 'SimulatorLoadState' @{GatewayId=$model.GatewayId} }
             }
+        }
+        # Poll only while monitoring is visible; never block the UI thread or
+        # interrupt draft, plan, apply or manually submitted traffic operations.
+        if (-not $model.Closing -and -not $model.Active -and $model.GatewayId -and
+            $tabs.SelectedTab -eq $trafficPage -and
+            [DateTime]::UtcNow -ge $model.NextTrafficPoll) {
+            $model.NextTrafficPoll=[DateTime]::UtcNow.AddSeconds(2)
+            & $start 'SimulatorTrafficRead' @{GatewayId=$model.GatewayId}
         }
         if ($model.Closing -and (& $commands.Count -Dispatcher $dispatcher) -eq 0) { $timer.Stop();$form.Close() }
     }.GetNewClosure())

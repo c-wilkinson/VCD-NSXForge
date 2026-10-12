@@ -11,6 +11,7 @@ $script:OperationDefinitions = [ordered]@{
     SimulatorLoadState  = @{ Required = @{ ApiUrl='SimulatorOrigin'; GatewayId='Text' }; Optional = @{}; Kind = 'Simulator' }
     SimulatorPlan       = @{ Required = @{ ApiUrl='SimulatorOrigin'; Baseline='Object'; Documents='Object'; OutputDirectory='Text' }; Optional = @{}; Kind = 'Simulator' }
     SimulatorApply      = @{ Required = @{ ApiUrl='SimulatorOrigin'; Approved='Object'; ActorDomain='Text'; ActorTier='Tier' }; Optional = @{}; Kind = 'Simulator' }
+    SimulatorTrafficRead = @{ Required = @{ ApiUrl='SimulatorOrigin'; GatewayId='Text' }; Optional = @{}; Kind = 'Simulator' }
     SimulatorTraffic    = @{ Required = @{ ApiUrl='SimulatorOrigin'; GatewayId='Text'; SourceIp='Text'; DestinationIp='Text'; Protocol='Text'; DestinationPort='Port' }; Optional = @{}; Kind = 'Simulator' }
     SimulatorSaveDraft  = @{ Required = @{ ApiUrl='SimulatorOrigin'; Documents='Object'; StateRoot='Text'; Scope='Text' }; Optional = @{}; Kind = 'Simulator' }
     SaveRuleTemplate    = @{ Required = @{ Rule='Object'; TemplateName='Text'; TemplatePath='Text'; BuiltInPath='Text' }; Optional = @{}; Kind = 'Offline' }

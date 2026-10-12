@@ -318,7 +318,7 @@ if ($RunUiTests -and [Environment]::UserInteractive -and $PSVersionTable.PSEditi
             $cfg=Read-AppConfiguration -ApplicationRoot $ProjectRoot
             $cfg.vcd.mode='Simulator';$cfg.vcd.apiUrl='http://127.0.0.1:8765'
             $window=New-NetworkEditorForm -Configuration $cfg -Logger $logger
-            foreach ($controlName in @('ScopeSelector','ActorSelector','edgeFirewallRulesList','edgeFirewallRulesAddButton','edgeFirewallRulesEditButton','edgeFirewallRulesRemoveButton','edgeFirewallRulesUpButton','edgeFirewallRulesDownButton','ipSetsList','manualIpReservationsList','ApplySimulatorButton','GeneratePlanButton','PlanDiffDetails','SimulateFlowButton','TrafficEvents')) {
+            foreach ($controlName in @('ScopeSelector','ActorSelector','edgeFirewallRulesList','edgeFirewallRulesAddButton','edgeFirewallRulesEditButton','edgeFirewallRulesRemoveButton','edgeFirewallRulesUpButton','edgeFirewallRulesDownButton','ipSetsList','manualIpReservationsList','ApplySimulatorButton','GeneratePlanButton','PlanDiffDetails','SimulateFlowButton','TrafficEvents','TrafficAutoRefreshLabel')) {
                 Assert-True ($window.Form.Controls.Find($controlName,$true).Count -eq 1) "Missing editor control: $controlName"
             }
             Assert-True (-not $window.Form.Controls.Find('ApplySimulatorButton',$true)[0].Enabled)

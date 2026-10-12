@@ -102,3 +102,63 @@ Invoke-TestCase -Name 'Simulator implements API 39.0 organisation VDC gateway an
     $networks=Invoke-SimulatorRoute -Dataset $data -Method GET -Path '/cloudapi/1.0.0/orgVdcNetworks' -Query @{page='1';pageSize='33'} -Authorization 'Bearer simulator-read-only'
     Assert-Equal 400 $networks.StatusCode
 }
+
+Invoke-TestCase -Name 'Enterprise VCD API exposes synthetic capability evidence and genuine supported rule field names' -Body {
+    $data=Import-SimulatorTopology -Path (Join-Path $ProjectRoot 'simulator\scenarios\enterprise-lab\topology.json')
+    $gateway=@($data.gateways | Where-Object { $_.domain -eq 'DomainB' -and $_.tier -eq 1 })[0]
+    $uri='/cloudapi/1.0.0/edgeGateways/'+[uri]::EscapeDataString([string]$gateway.gatewayId)
+    $detail=Invoke-SimulatorRoute -Dataset $data -Method GET -Path $uri -Authorization 'Bearer simulator-read-only'
+    Assert-Equal 200 $detail.StatusCode
+    Assert-Equal '10.6' $detail.Body.vcdVersion
+    Assert-Equal 'NSXT_BACKED' $detail.Body.gatewayMode
+    Assert-Equal 'NSX_T' $detail.Body.networkBacking
+    Assert-True $detail.Body.synthetic
+    $firewall=Invoke-SimulatorRoute -Dataset $data -Method GET -Path ('/cloudapi/2.0.0/edgeGateways/'+[uri]::EscapeDataString([string]$gateway.gatewayId)+'/firewall/rules') -Authorization 'Bearer simulator-read-only'
+    Assert-Equal 200 $firewall.StatusCode
+    Assert-True (@($firewall.Body.userDefinedRules).Count -ge 20)
+    foreach ($rule in @($firewall.Body.userDefinedRules)) {
+        Assert-True ($rule.PSObject.Properties.Name -cnotcontains 'simulatorServices')
+        Assert-True ($rule.active -is [bool])
+        Assert-True ($rule.PSObject.Properties.Name -ccontains 'active')
+    }
+    Assert-True (@($firewall.Body.userDefinedRules | Where-Object { $null -ne $_.PSObject.Properties['rawPortProtocols'] -and @($_.rawPortProtocols).Count -gt 0 }).Count -gt 0)
+    # The PRIVATE documents retain the port lists for real first-match synthetic matching.
+    $null=Initialize-SimulatorWorkspace -Dataset $data
+    Assert-True (@($data.simulatorWorkspace[$gateway.gatewayId].documents.edgeFirewallRules.items | Where-Object { @($_.services).Count -gt 0 }).Count -gt 0)
+    $write=Invoke-SimulatorRoute -Dataset $data -Method PATCH -Path $uri -Authorization 'Bearer simulator-read-only'
+    Assert-Equal 405 $write.StatusCode
+}
+
+Invoke-TestCase -Name 'Curated background traffic cycles across all six gateways and respects the current firewall' -Body {
+    $data=Import-SimulatorTopology -Path (Join-Path $ProjectRoot 'simulator\scenarios\enterprise-lab\topology.json')
+    $null=Initialize-SimulatorWorkspace -Dataset $data
+    $schedule=New-SimulatorTrafficSchedule -Dataset $data -CasesPath (Join-Path $ProjectRoot 'simulator\scenarios\enterprise-lab\flow-cases.json')
+    Assert-Equal 32 @($schedule.cases).Count
+    $seen=@{}; $verdicts=@{}
+    for ($i=0;$i -lt 12;$i++) {
+        $flow=Invoke-SimulatorTrafficTick -Dataset $data -Schedule $schedule
+        Assert-True $flow.synthetic
+        $seen[[string]$flow.gatewayId]=$true
+        $verdicts[[string]$flow.verdict]=$true
+        $history=Invoke-SimulatorRoute -Dataset $data -Method GET -Path '/__simulator/v1/traffic' -Authorization 'Bearer simulator-read-only' -Query @{gatewayId=[string]$flow.gatewayId}
+        Assert-Equal 200 $history.StatusCode
+        Assert-True (@($history.Body.events).Count -gt 0)
+    }
+    Assert-Equal 6 $seen.Count
+    Assert-True $verdicts.ContainsKey('Allowed')
+    Assert-True $verdicts.ContainsKey('Denied')
+    Assert-Equal 12 $schedule.generated
+    # The generator never increments a configuration revision.
+    foreach ($slot in $data.simulatorWorkspace.Values) { Assert-Equal 0 $slot.revision }
+}
+
+Invoke-TestCase -Name 'Invalid traffic fixture cannot introduce unknown gateway flows' -Body {
+    $data=Import-SimulatorTopology -Path (Join-Path $ProjectRoot 'simulator\scenarios\enterprise-lab\topology.json')
+    $tmp=Join-Path ([IO.Path]::GetTempPath()) ('sim-traffic-'+[guid]::NewGuid().ToString('n')+'.json')
+    try {
+        $invalid=[pscustomobject]@{schemaVersion=1;synthetic=$true;cases=@([pscustomobject]@{gatewayId='unknown';protocol='TCP';destinationPort=443})}
+        [IO.File]::WriteAllText($tmp,(ConvertTo-Json -InputObject $invalid -Depth 10))
+        Assert-Throws { New-SimulatorTrafficSchedule -Dataset $data -CasesPath $tmp }
+    }
+    finally { if ([IO.File]::Exists($tmp)) { [IO.File]::Delete($tmp) } }
+}
