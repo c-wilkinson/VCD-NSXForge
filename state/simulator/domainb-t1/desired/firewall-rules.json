@@ -3,36 +3,576 @@
     "resourceKind":  "edgeFirewallRules",
     "items":  [
                   {
-                      "key":  "vcd-4505560c-7afa-5bc0-978c-3c1f38cb2375",
-                      "name":  "DomainB-T1-Allow-HTTPS",
-                      "description":  "Synthetic rule; no traffic is actually permitted",
+                      "key":  "vcd-84077951-2ea2-571c-a5f5-5eaf6339e3f3",
+                      "name":  "Allow web HTTPS to app middleware",
+                      "description":  "SYNTHETIC: Web tier to application tier",
                       "order":  0,
                       "action":  "ALLOW",
                       "enabled":  true,
                       "logging":  true,
                       "sourceIpSets":  [
-                                           "vcd-b8139949-5406-5650-abdb-910fbc2c0400"
+                                           "vcd-d2d118fe-ecb3-5958-9e64-7cfee5c3b14d"
                                        ],
                       "destinationIpSets":  [
-
+                                                "vcd-c2faaeb3-2f9f-5c1a-a79f-26602b912914"
                                             ],
                       "services":  [
-
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "443"
+                                                     ]
+                                       }
                                    ]
                   },
                   {
-                      "key":  "test",
-                      "name":  "Test",
-                      "description":  "",
+                      "key":  "vcd-8902f8cc-8a23-51c2-826c-5c94f06e1888",
+                      "name":  "Allow application to SQL FCI",
+                      "description":  "SYNTHETIC: Application SQL client connectivity",
                       "order":  1,
                       "action":  "ALLOW",
                       "enabled":  true,
                       "logging":  true,
                       "sourceIpSets":  [
-                                           "vcd-b8139949-5406-5650-abdb-910fbc2c0400"
+                                           "vcd-c2faaeb3-2f9f-5c1a-a79f-26602b912914"
                                        ],
                       "destinationIpSets":  [
-                                                "vcd-b8139949-5406-5650-abdb-910fbc2c0400"
+                                                "vcd-c4513159-bb5c-5c59-a8a3-c896ab9e91b6"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "1433"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-b841e649-8e04-532d-86b9-2dc8dbcd4712",
+                      "name":  "Allow reporting web to SQL AG listener",
+                      "description":  "SYNTHETIC: Read-only reporting example",
+                      "order":  2,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-d2d118fe-ecb3-5958-9e64-7cfee5c3b14d"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-c4513159-bb5c-5c59-a8a3-c896ab9e91b6"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "1433"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-43edd9fe-1bdd-5a4d-8909-67c167814e31",
+                      "name":  "Allow SQL FCI cluster heartbeat",
+                      "description":  "SYNTHETIC: WSFC and Windows RPC (simplified)",
+                      "order":  3,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-0d1c023e-d3bf-5ab8-99a3-2ca84131da34"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-0d1c023e-d3bf-5ab8-99a3-2ca84131da34"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "3343",
+                                                         "135",
+                                                         "445",
+                                                         "49152-65535"
+                                                     ]
+                                       },
+                                       {
+                                           "protocol":  "UDP",
+                                           "ports":  [
+                                                         "3343"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-76860af7-db70-5ef8-8e8d-834464a84ffc",
+                      "name":  "Allow SQL Always On HADR transport",
+                      "description":  "SYNTHETIC: DomainC DR replicas to DomainB primary SQL",
+                      "order":  4,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-318a3cec-39b9-514a-a750-0e622f9ce100"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-0d1c023e-d3bf-5ab8-99a3-2ca84131da34"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "5022"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-8d42f4ce-497e-57f4-8fed-d02b253dfd5c",
+                      "name":  "Allow ADO application to SQL",
+                      "description":  "SYNTHETIC: Azure DevOps database connectivity",
+                      "order":  5,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-cf8cc11c-d0a0-5800-9edf-d65bebe28e04"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-c4513159-bb5c-5c59-a8a3-c896ab9e91b6"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "1433"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-aa79f651-77bd-5cd7-a90a-ff92659d9625",
+                      "name":  "Allow user HTTPS to RDS gateway",
+                      "description":  "SYNTHETIC: RDS published access",
+                      "order":  6,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-11a5b856-5f71-597a-bc82-8f308ecde885"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "443"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-755599fb-cbe7-5dcf-84ae-7ed3bbe09a64",
+                      "name":  "Allow RDS gateway to session hosts",
+                      "description":  "SYNTHETIC: RDS Gateway session transport",
+                      "order":  7,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-11a5b856-5f71-597a-bc82-8f308ecde885"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-2a6fff94-3996-5b7f-bafc-ccee5008dcdc"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "3389"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-9499dd44-52e6-5abc-b35d-d268c17c262a",
+                      "name":  "Allow RDS broker to session hosts",
+                      "description":  "SYNTHETIC: Session brokering / session management",
+                      "order":  8,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-7ab6e7ba-8160-5df1-a0d5-4ce425e13092"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-2a6fff94-3996-5b7f-bafc-ccee5008dcdc"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "3389",
+                                                         "445"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-69fac6b0-dfcd-56d8-ae93-df349c007dd3",
+                      "name":  "Allow RDS sessions to departmental files",
+                      "description":  "SYNTHETIC: SMB file access",
+                      "order":  9,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-2a6fff94-3996-5b7f-bafc-ccee5008dcdc"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-1632ea2c-d3bf-5b23-af08-f89e6df27702"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "445"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-825a8108-9fda-5412-8dbe-47575698c371",
+                      "name":  "Allow clients to DFS shares",
+                      "description":  "SYNTHETIC: Windows file shares via DFS targets",
+                      "order":  10,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-1632ea2c-d3bf-5b23-af08-f89e6df27702"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "445"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-31556fee-b973-5e6a-a0ee-297e66afe738",
+                      "name":  "Allow MCM distribution to clients",
+                      "description":  "SYNTHETIC: ConfigMgr content download",
+                      "order":  11,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-efdc17b7-4055-5c35-81a4-2a12e028eed3"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "80",
+                                                         "443"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-9ade4354-eced-5002-88c3-174d368f01f5",
+                      "name":  "Allow MCM site to endpoints",
+                      "description":  "SYNTHETIC: ConfigMgr client push (illustrative RPC range)",
+                      "order":  12,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-ed9c7d84-81b3-5827-994c-3005ad6ce5d6"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20",
+                                                "vcd-2a6fff94-3996-5b7f-bafc-ccee5008dcdc",
+                                                "vcd-d2d118fe-ecb3-5958-9e64-7cfee5c3b14d",
+                                                "vcd-c2faaeb3-2f9f-5c1a-a79f-26602b912914"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "445",
+                                                         "135",
+                                                         "49152-65535"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-5c76ab00-a0be-5a9a-84d3-62b36cc52c2c",
+                      "name":  "Allow WSUS content",
+                      "description":  "SYNTHETIC: Software updates via SUP",
+                      "order":  13,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20",
+                                           "vcd-2a6fff94-3996-5b7f-bafc-ccee5008dcdc"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-cc2d7c47-2364-5f7b-89fa-a44732712c1e"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "8530",
+                                                         "8531"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-35fc027c-8375-53c2-9099-b5e542438464",
+                      "name":  "Allow build agents to ADO",
+                      "description":  "SYNTHETIC: ADO agent registration and job polling",
+                      "order":  14,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-8cbd86b3-8037-5078-9e24-6495ac6bc58a"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-cf8cc11c-d0a0-5800-9edf-d65bebe28e04"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "443"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-e99136a6-5ae8-5dbc-8298-57ab2bc4690b",
+                      "name":  "Allow DomainC deployment agent to ADO",
+                      "description":  "SYNTHETIC: Cross-domain pipeline polling; network path not AD trust",
+                      "order":  15,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-ea15cb31-4b90-56a4-aa29-2f82b817f6cd"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-cf8cc11c-d0a0-5800-9edf-d65bebe28e04"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "443"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-41f4e50f-c27c-5dd4-8f58-72bb2710fa88",
+                      "name":  "Allow build agents to SCM and artifacts",
+                      "description":  "SYNTHETIC: Git via SSH/HTTPS and artifacts over TLS",
+                      "order":  16,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-8cbd86b3-8037-5078-9e24-6495ac6bc58a"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-6c1df797-d3f2-53be-9e87-693c1937abb4"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "22",
+                                                         "443"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-f9b57102-8144-5228-a14f-3072542fecd9",
+                      "name":  "Allow internal clients to ADO",
+                      "description":  "SYNTHETIC: Internal ADO web UI and git HTTPS",
+                      "order":  17,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20",
+                                           "vcd-2a6fff94-3996-5b7f-bafc-ccee5008dcdc"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-cf8cc11c-d0a0-5800-9edf-d65bebe28e04"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "443"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-16f1f29f-c35f-5dc6-a39b-343f25d1177a",
+                      "name":  "Allow DomainA admins to manage Tier1",
+                      "description":  "SYNTHETIC: Delegated management using Tier0 identity (simulated)",
+                      "order":  18,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-c5faf811-e24b-587c-985e-143e0ad620dd"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-cf8cc11c-d0a0-5800-9edf-d65bebe28e04",
+                                                "vcd-ed9c7d84-81b3-5827-994c-3005ad6ce5d6",
+                                                "vcd-0d1c023e-d3bf-5ab8-99a3-2ca84131da34",
+                                                "vcd-1632ea2c-d3bf-5b23-af08-f89e6df27702",
+                                                "vcd-7ab6e7ba-8160-5df1-a0d5-4ce425e13092"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "5986"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-d3b66c8f-70c3-5fde-9a6f-9854703bdd13",
+                      "name":  "Allow backup proxy to SQL and files",
+                      "description":  "SYNTHETIC: Backup and recovery workflows (simplified)",
+                      "order":  19,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-df5fc2c6-63fd-5fc7-87f8-fd79cc98e152"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-0d1c023e-d3bf-5ab8-99a3-2ca84131da34",
+                                                "vcd-1632ea2c-d3bf-5b23-af08-f89e6df27702"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "445",
+                                                         "443"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-8130bda8-e496-56c0-b2ce-d351b3f2190f",
+                      "name":  "Allow application logs to central monitor",
+                      "description":  "SYNTHETIC: Telemetry to central monitoring scope",
+                      "order":  20,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-d2d118fe-ecb3-5958-9e64-7cfee5c3b14d",
+                                           "vcd-c2faaeb3-2f9f-5c1a-a79f-26602b912914",
+                                           "vcd-cf8cc11c-d0a0-5800-9edf-d65bebe28e04"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-e1a779da-1594-5896-b95c-b8b470695d47"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "443",
+                                                         "6514"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-36db0a0d-58ef-53ad-ba23-b3959ae14712",
+                      "name":  "Block untrusted clients direct SQL",
+                      "description":  "SYNTHETIC: Clients should use application tier, not direct database connectivity",
+                      "order":  21,
+                      "action":  "DROP",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-c4513159-bb5c-5c59-a8a3-c896ab9e91b6"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "1433"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "vcd-68052363-6981-5504-8918-1baafbabf406",
+                      "name":  "Disabled legacy direct SQL client",
+                      "description":  "SYNTHETIC: Disabled prior exception retained for change review",
+                      "order":  22,
+                      "action":  "ALLOW",
+                      "enabled":  false,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-c4513159-bb5c-5c59-a8a3-c896ab9e91b6"
+                                            ],
+                      "services":  [
+                                       {
+                                           "protocol":  "TCP",
+                                           "ports":  [
+                                                         "1433"
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "key":  "manual-test",
+                      "name":  "Manual Test",
+                      "description":  "",
+                      "order":  23,
+                      "action":  "ALLOW",
+                      "enabled":  true,
+                      "logging":  true,
+                      "sourceIpSets":  [
+                                           "vcd-8cbd86b3-8037-5078-9e24-6495ac6bc58a"
+                                       ],
+                      "destinationIpSets":  [
+                                                "vcd-c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20"
                                             ],
                       "services":  [
 

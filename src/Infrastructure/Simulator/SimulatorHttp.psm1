@@ -30,8 +30,15 @@ function Invoke-SimulatorApi {
     $arguments=@{Uri=$url;Method=$Method;Headers=$headers;TimeoutSec=20;ErrorAction='Stop';MaximumRedirection=0}
     if ($Method -eq 'POST') {
         if ($null -eq $Payload) { throw 'POST requires a JSON payload.' }
-        $arguments.ContentType='application/json'
-        $arguments.Body=ConvertTo-Json -InputObject $Payload -Depth 40 -Compress
+        # Windows PowerShell 5.1 can encode a string -Body using a legacy
+        # single-byte code page when ContentType omits a charset. The synthetic
+        # enterprise lab contains non-ASCII descriptions (for example, an em
+        # dash). A different wire encoding changes the v3 frozen JSON digest
+        # after the server decodes the request as UTF-8, causing a false 409.
+        # Supply UTF-8 *bytes* so Invoke-RestMethod cannot re-encode the body.
+        $arguments.ContentType='application/json; charset=utf-8'
+        $json=ConvertTo-Json -InputObject $Payload -Depth 40 -Compress
+        $arguments.Body=[System.Text.Encoding]::UTF8.GetBytes($json)
     }
     $response=Invoke-RestMethod @arguments
     if ($Resource -eq 'state' -and $Method -eq 'GET') {

@@ -84,7 +84,7 @@ Invoke-TestCase -Name 'Simulator apply enforces RBAC on the server not only in W
     $gateway=@($data.gateways | Where-Object {$_.domain -eq 'DomainB' -and $_.tier -eq 1})[0]
     $current=Get-SimulatorWorkspaceState -Dataset $data -GatewayId $gateway.gatewayId
     $approved=Get-SimulatorDraftPlan -Baseline $current -DesiredDocuments $current.documents
-    $request=[pscustomobject]@{gatewayId=$gateway.gatewayId;expectedRevision=0;planDigest=$approved.planDigest;documents=$current.documents;actorDomain='DomainB';actorTier=1;confirmation='APPLY SIMULATOR'}
+    $request=[pscustomobject]@{gatewayId=$gateway.gatewayId;expectedRevision=0;approvalVersion=$approved.approvalVersion;baselineDigest=$approved.baselineDigest;desiredDigest=$approved.desiredDigest;planDigest=$approved.planDigest;documents=$current.documents;actorDomain='DomainB';actorTier=1;confirmation='APPLY SIMULATOR'}
     Assert-Throws { Invoke-SimulatorApply -Dataset $data -Request $request }
     Assert-Equal 0 (Get-SimulatorWorkspaceState -Dataset $data -GatewayId $gateway.gatewayId).revision
 }

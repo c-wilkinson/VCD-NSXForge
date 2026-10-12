@@ -10,6 +10,39 @@ Import-Module (Join-Path $PSScriptRoot '..\..\Application\Editing\NetworkWorkspa
 Import-Module (Join-Path $PSScriptRoot '..\..\Application\Editing\NetworkRuleTemplates.psm1') -ErrorAction Stop
 Import-Module (Join-Path $PSScriptRoot '..\..\Domain\Access\SimulatorRbac.psm1') -ErrorAction Stop
 
+# Register once using the actual WinForms FormClosingEventArgs.  `$args` is a
+# PowerShell automatic variable and must not be used as an event parameter.
+# Callback injection allows the real event path to be tested without a modal UI.
+function Register-NetworkEditorCloseHandler {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][System.Windows.Forms.Form]$Form,
+        [Parameter(Mandatory)]$Model,
+        [Parameter(Mandatory)][scriptblock]$ConfirmDiscard,
+        [Parameter(Mandatory)][scriptblock]$GetWorkerCount,
+        [Parameter(Mandatory)][scriptblock]$RequestCancellation
+    )
+
+    $Form.Add_FormClosing({
+        param($sender, [System.Windows.Forms.FormClosingEventArgs]$closingEvent)
+
+        if (-not $Model.Closing -and $Model.Dirty -and -not (& $ConfirmDiscard)) {
+            # No: preserve the current form and dirty draft, and do not cancel work.
+            $closingEvent.Cancel = $true
+            return
+        }
+
+        if ([int](& $GetWorkerCount) -gt 0) {
+            # No GUI shutdown while background operations may still be running.
+            $closingEvent.Cancel = $true
+            if (-not $Model.Closing) {
+                $Model.Closing = $true
+                & $RequestCancellation
+            }
+        }
+    }.GetNewClosure())
+}
+
 function New-NetworkEditorForm {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Configuration,[Parameter(Mandatory)]$Logger,
@@ -455,16 +488,22 @@ function New-NetworkEditorForm {
         }
         if ($model.Closing -and (& $commands.Count -Dispatcher $dispatcher) -eq 0) { $timer.Stop();$form.Close() }
     }.GetNewClosure())
-    $form.Add_FormClosing({ param($sender,$args)
-        if (-not $model.Closing -and $model.Dirty -and [System.Windows.Forms.MessageBox]::Show('Discard unapplied draft changes?','Close network editor','YesNo','Warning') -ne 'Yes') {
-            $args.Cancel=$true; return
-        }
-        if ((& $commands.Count -Dispatcher $dispatcher) -gt 0) {
-            $args.Cancel=$true;$model.Closing=$true;$cancel.Enabled=$false;& $commands.Cancel -Dispatcher $dispatcher
-            $status.Text='Closing after background worker exits...'
-        }
-    }.GetNewClosure())
+    # Keep the event handler independent of the PowerShell `$args` automatic variable.
+    # The callbacks are captured explicitly for Windows PowerShell 5.1 modules.
+    $registerClose = Get-Command Register-NetworkEditorCloseHandler -ErrorAction Stop
+    $confirmDiscard = {
+        [System.Windows.Forms.MessageBox]::Show('Discard unapplied draft changes?',
+            'Close network editor','YesNo','Warning') -eq [System.Windows.Forms.DialogResult]::Yes
+    }.GetNewClosure()
+    $countWorkers = { & $commands.Count -Dispatcher $dispatcher }.GetNewClosure()
+    $cancelWorkers = {
+        $cancel.Enabled=$false
+        & $commands.Cancel -Dispatcher $dispatcher
+        $status.Text='Closing after background worker exits...'
+    }.GetNewClosure()
+    & $registerClose -Form $form -Model $model -ConfirmDiscard $confirmDiscard `
+        -GetWorkerCount $countWorkers -RequestCancellation $cancelWorkers
     $form.Add_Shown({$timer.Start(); & $start 'SimulatorScopes' @{} }.GetNewClosure())
     return [pscustomobject]@{Form=$form;Timer=$timer;Dispatcher=$dispatcher;CloseCommand=$commands.Close}
 }
-Export-ModuleMember -Function New-NetworkEditorForm
+Export-ModuleMember -Function New-NetworkEditorForm, Register-NetworkEditorCloseHandler

@@ -118,16 +118,104 @@ function Get-SimulatorWorkspaceState {
 
 function Get-SimulatorPlanDigest {
     param([Parameter(Mandatory)]$Plan)
+    # The editor computes this in a worker runspace, while the simulator
+    # independently recomputes it in another PowerShell process.  An ordinary
+    # hashtable has no guaranteed enumeration order, so JSON generated from
+    # [pscustomobject]@{...} must NOT be used as a hash protocol.
+    #
+    # Explicitly order EVERY JSON map in the approval envelope, including the
+    # action fields and counts.  Rule contents are independently canonicalised
+    # by the shared state model (including set-valued fields).
     $normalized=@()
     foreach ($action in @($Plan.actions)) {
         $before=if ($null -eq $action.Before) { '' } else { Get-NetworkCanonicalItem -Item $action.Before }
         $after=if ($null -eq $action.After) { '' } else { Get-NetworkCanonicalItem -Item $action.After }
-        $normalized+=[pscustomobject]@{kind=[string]$action.ResourceKind;key=[string]$action.Key;change=[string]$action.Change;before=$before;after=$after;dependencies=@($action.DependsOn | Sort-Object)}
+        $normalized+= [ordered]@{
+            kind=[string]$action.ResourceKind
+            key=[string]$action.Key
+            change=[string]$action.Change
+            before=$before
+            after=$after
+            dependencies=@($action.DependsOn | Sort-Object)
+        }
     }
-    $text=ConvertTo-Json -InputObject ([pscustomobject]@{actions=@($normalized);summary=$Plan.summary;blocked=[bool]$Plan.blocked}) -Depth 40 -Compress
+    $counts=[ordered]@{
+        Create=[int]$Plan.summary.Create
+        Update=[int]$Plan.summary.Update
+        Move=[int]$Plan.summary.Move
+        Delete=[int]$Plan.summary.Delete
+    }
+    $approval=[ordered]@{
+        actions=@($normalized)
+        summary=$counts
+        blocked=[bool]$Plan.blocked
+    }
+    $text=ConvertTo-Json -InputObject $approval -Depth 40 -Compress
     $hash=[System.Security.Cryptography.SHA256]::Create()
     try { return [BitConverter]::ToString($hash.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($text))).Replace('-','').ToLowerInvariant() }
     finally { $hash.Dispose() }
+}
+
+# Approval v2 is based on the exact reviewed desired state, the gateway and
+# the observed baseline, not a JSON serialization of a plan created independently
+# in separate PowerShell processes.  The server still builds/validates its own
+# plan before any commit.  This protocol is for the LOCAL simulator only.
+function Get-SimulatorWorkspaceDigest {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Documents)
+    $null=Test-NetworkStateView -Documents $Documents
+    $kinds=@()
+    foreach ($kind in @('ipSets','edgeFirewallRules','manualIpReservations')) {
+        # Resource arrays are keyed sets. Firewall ordering is already retained
+        # in every rule's explicit 'order' property, so item array position must
+        # not make approvals differ between JSON and WinForms/runspace objects.
+        $items=@()
+        foreach ($item in @($Documents[$kind].items | Sort-Object -Property @{Expression={ [string]$_.key }} -CaseSensitive)) {
+            $items+= [string](Get-NetworkCanonicalItem -Item $item)
+        }
+        $kinds+= [ordered]@{
+            kind=$kind
+            schemaVersion=[int]$Documents[$kind].schemaVersion
+            resourceKind=[string]$Documents[$kind].resourceKind
+            items=@($items)
+        }
+    }
+    $serialized=ConvertTo-Json -InputObject ([ordered]@{version=2;resources=@($kinds)}) -Depth 40 -Compress
+    $sha=[System.Security.Cryptography.SHA256]::Create()
+    try { return [BitConverter]::ToString($sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($serialized))).Replace('-','').ToLowerInvariant() }
+    finally { $sha.Dispose() }
+}
+
+# Approval v3 freezes the *exact* desired JSON payload at review time.  The
+# later WinForms -> runspace -> HTTP boundary sends this string unchanged;
+# hashing the string avoids re-materialising JSON in a different runspace.
+# This is simulator-only, not a cryptographic signature or live change approval.
+function Get-SimulatorFrozenPayloadDigest {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$Json)
+    $sha=[System.Security.Cryptography.SHA256]::Create()
+    try { return [BitConverter]::ToString($sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Json))).Replace('-','').ToLowerInvariant() }
+    finally { $sha.Dispose() }
+}
+
+function Get-SimulatorApprovalDigest {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$GatewayId,
+          [Parameter(Mandatory)][ValidateRange(0,2147483647)][int]$ExpectedRevision,
+          [Parameter(Mandatory)][ValidatePattern('^[a-f0-9]{64}$')][string]$BaselineDigest,
+          [Parameter(Mandatory)][ValidatePattern('^[a-f0-9]{64}$')][string]$DesiredDigest,
+          [ValidateSet(2,3)][int]$Version=2)
+    $envelope=[ordered]@{
+        version=$Version
+        gatewayId=$GatewayId
+        expectedRevision=$ExpectedRevision
+        baselineDigest=$BaselineDigest
+        desiredDigest=$DesiredDigest
+    }
+    $serialized=ConvertTo-Json -InputObject $envelope -Depth 5 -Compress
+    $sha=[System.Security.Cryptography.SHA256]::Create()
+    try { return [BitConverter]::ToString($sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($serialized))).Replace('-','').ToLowerInvariant() }
+    finally { $sha.Dispose() }
 }
 
 function Save-SimulatorWorkspace {
@@ -163,17 +251,63 @@ function Invoke-SimulatorApply {
     if (-not $permission.canManage) { throw '403: Synthetic domain/tier management policy denies the change.' }
     $role=Get-SimulatorActorRole -Dataset $Dataset -ActorDomain $actor -ActorTier $actorTier -TargetDomain $current.domain -TargetTier ([int]$current.tier)
     if (-not (Test-SimulatorRolePermission -Role $role.Role -Operation Apply)) { throw '403: Synthetic role lacks permission to apply; Tier 0 administrator required.' }
+    # v2 is retained for compatibility with existing local simulator clients.
+    # v3 binds approval to one frozen JSON string, sent unchanged from review
+    # to apply.  No second, ambiguous 'documents' value is accepted in v3.
+    $approvalVersion=if ($null -ne $Request.PSObject.Properties['approvalVersion']) { [int]$Request.approvalVersion } else { 0 }
+    if ($approvalVersion -notin @(2,3)) { throw '409: Simulator approval format changed; generate a fresh plan.' }
     $docs=[ordered]@{}
-    foreach ($kind in @('ipSets','edgeFirewallRules','manualIpReservations')) {
-        if ($null -eq $Request.documents.PSObject.Properties[$kind]) { throw "Missing desired $kind document." }
-        $docs[$kind]=$Request.documents.$kind
+    if ($approvalVersion -eq 3) {
+        if ($null -ne $Request.PSObject.Properties['documents']) { throw '409: Ambiguous simulator desired state; generate a fresh plan.' }
+        if ($null -eq $Request.PSObject.Properties['documentsJson'] -or $Request.documentsJson -isnot [string] -or
+            [string]::IsNullOrWhiteSpace($Request.documentsJson) -or $Request.documentsJson.Length -gt 8388608) {
+            throw '409: Invalid frozen simulator draft; generate a fresh plan.'
+        }
+        # Integrity check is performed on the *raw submitted JSON string*, not
+        # on its separate PowerShell object re-serialization.
+        $submittedPayloadDigest=Get-SimulatorFrozenPayloadDigest -Json $Request.documentsJson
+        if ([string]$Request.desiredDigest -cne $submittedPayloadDigest) {
+            throw '409: Submitted simulator draft differs from the approved draft; generate a fresh plan.'
+        }
+        try { $incoming=ConvertFrom-Json -InputObject $Request.documentsJson -ErrorAction Stop }
+        catch { throw '409: Frozen simulator draft is invalid JSON; generate a fresh plan.' }
+        if ($incoming -isnot [pscustomobject]) { throw '409: Frozen simulator draft is not an object.' }
+        foreach ($kind in @('ipSets','edgeFirewallRules','manualIpReservations')) {
+            if ($null -eq $incoming.PSObject.Properties[$kind]) { throw "Missing desired $kind document." }
+            $docs[$kind]=$incoming.$kind
+        }
+        if (@($incoming.PSObject.Properties.Name).Count -ne 3) { throw '409: Unexpected simulator document types.' }
+    }
+    else {
+        if ($null -eq $Request.PSObject.Properties['documents']) { throw 'Missing simulator desired documents.' }
+        foreach ($kind in @('ipSets','edgeFirewallRules','manualIpReservations')) {
+            if ($null -eq $Request.documents.PSObject.Properties[$kind]) { throw "Missing desired $kind document." }
+            $docs[$kind]=$Request.documents.$kind
+        }
     }
     $null=Test-NetworkStateView -Documents $docs
     foreach ($item in @($docs['manualIpReservations'].items)) { if ($item.networkId -cne $current.networkId) { throw 'Reservation is outside the selected gateway network.' } }
     if (@($docs['edgeFirewallRules'].items).Count -gt 128 -or @($docs['ipSets'].items).Count -gt 128) { throw 'Simulator resource safety limit exceeded.' }
     $plan=New-SimulatorDocumentPlan -DesiredDocuments $docs -CurrentDocuments $current.documents -Scope $current.gatewayId
     if ($plan.blocked) { throw 'Plan blocked due to state drift or unsafe changes.' }
-    if ((Get-SimulatorPlanDigest $plan) -cne [string]$Request.planDigest) { throw '409: Approved plan differs from submitted changes.' }
+    # Refuse old plan-object-based approvals; they are not reliably reproducible
+    # across the GUI/worker/HTTP boundary. Explicitly bind this decision to
+    # both server baseline and approved desired-state contents.
+    $actualBaseline=Get-SimulatorWorkspaceDigest -Documents $current.documents
+    if ([string]$Request.baselineDigest -cne $actualBaseline) {
+        throw '409: Simulator baseline differs from the approved snapshot; refresh and re-plan.'
+    }
+    if ($approvalVersion -eq 2) {
+        $actualDesired=Get-SimulatorWorkspaceDigest -Documents $docs
+        if ([string]$Request.desiredDigest -cne $actualDesired) {
+            throw '409: Submitted simulator draft differs from the approved draft; generate a fresh plan.'
+        }
+    }
+    else { $actualDesired=$submittedPayloadDigest }
+    $actualApproval=Get-SimulatorApprovalDigest -GatewayId $current.gatewayId -ExpectedRevision $current.revision -BaselineDigest $actualBaseline -DesiredDigest $actualDesired -Version $approvalVersion
+    if ([string]$Request.planDigest -cne $actualApproval) {
+        throw '409: Simulator approval does not match the gateway, revision or reviewed draft.'
+    }
     $updated=Copy-NetworkDocuments $docs
     $newWorkspace=@{}
     foreach ($key in @($Dataset.simulatorWorkspace.Keys)) { $newWorkspace[$key]=$Dataset.simulatorWorkspace[$key] }
@@ -198,4 +332,4 @@ function Invoke-SimulatorTraffic {
     return $entry
 }
 
-Export-ModuleMember -Function Initialize-SimulatorWorkspace, Get-SimulatorWorkspaceState, Get-SimulatorPlanDigest, Invoke-SimulatorApply, Invoke-SimulatorTraffic
+Export-ModuleMember -Function Initialize-SimulatorWorkspace, Get-SimulatorWorkspaceState, Get-SimulatorPlanDigest, Get-SimulatorWorkspaceDigest, Get-SimulatorFrozenPayloadDigest, Get-SimulatorApprovalDigest, Invoke-SimulatorApply, Invoke-SimulatorTraffic

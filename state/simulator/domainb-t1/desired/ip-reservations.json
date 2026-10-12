@@ -3,16 +3,184 @@
     "resourceKind":  "manualIpReservations",
     "items":  [
                   {
-                      "key":  "vcd-8b628402-0c41-5a70-8d09-0a120f2dd977",
+                      "key":  "vcd-b61ec8ce-35da-5285-b4cb-0dc166e9c2ec",
                       "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
-                      "address":  "10.51.20.50",
-                      "description":  "Synthetic IP reservation"
+                      "address":  "10.51.20.21",
+                      "description":  "SYNTHETIC: SQL Server FCI node — FCI Node 1"
                   },
                   {
-                      "key":  "reservation-10.51.20.51",
+                      "key":  "vcd-ed085188-eb4a-5736-a065-a3320b9e9c94",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.22",
+                      "description":  "SYNTHETIC: SQL Server FCI node — FCI Node 2"
+                  },
+                  {
+                      "key":  "vcd-b73edb37-d8ff-5f4c-bc07-9ce7d3f16334",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.20",
+                      "description":  "SYNTHETIC: SQL Server FCI virtual listener — Shared SQL FCI virtual IP / clustered client name"
+                  },
+                  {
+                      "key":  "vcd-8d62ad2d-f098-52f2-aca2-854a2207836f",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.23",
+                      "description":  "SYNTHETIC: SQL Server availability-group listener — Synthetic AG listener for reporting"
+                  },
+                  {
+                      "key":  "vcd-cceaab12-e73f-5ec5-b26a-905a92c4e13a",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.30",
+                      "description":  "SYNTHETIC: File server / DFS — Departmental SMB shares"
+                  },
+                  {
+                      "key":  "vcd-431b180d-4cf5-5863-bcc7-41b5632aa942",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.31",
+                      "description":  "SYNTHETIC: File server / DFS — Redundant DFS target"
+                  },
+                  {
+                      "key":  "vcd-f8fcec44-9f29-54fd-a814-6a0ab69bf625",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.32",
+                      "description":  "SYNTHETIC: DFS namespace — Namespace alias / synthetic VIP"
+                  },
+                  {
+                      "key":  "vcd-74a3cb2f-83bc-5cd9-950f-12a50453d067",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.40",
+                      "description":  "SYNTHETIC: RDS connection broker — Connection broker 1"
+                  },
+                  {
+                      "key":  "vcd-c5e6ec6f-ce6e-5e95-9eb4-60c58c5cdbdc",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.41",
+                      "description":  "SYNTHETIC: RDS connection broker — Connection broker 2"
+                  },
+                  {
+                      "key":  "vcd-ea9ccc8c-4916-51b9-88f5-04333a9aa2b2",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.42",
+                      "description":  "SYNTHETIC: RDS gateway — Gateway HTTPS ingress"
+                  },
+                  {
+                      "key":  "vcd-487270b1-117a-5423-9842-41b6a863027b",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.43",
+                      "description":  "SYNTHETIC: RDS gateway — Gateway HTTPS redundancy"
+                  },
+                  {
+                      "key":  "vcd-8886729c-b61f-581b-9b27-e7a35ee479e6",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.45",
+                      "description":  "SYNTHETIC: RDS session host — Session host 1"
+                  },
+                  {
+                      "key":  "vcd-f8c77e93-0ba3-546c-be0d-068dbcff4f9c",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.46",
+                      "description":  "SYNTHETIC: RDS session host — Session host 2"
+                  },
+                  {
+                      "key":  "vcd-847768bf-1b0e-587d-816e-7fdd5d5ce153",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.47",
+                      "description":  "SYNTHETIC: RDS session host — Session host 3"
+                  },
+                  {
+                      "key":  "vcd-286bc602-1f0c-539d-a6c6-5bdf7e143648",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.50",
+                      "description":  "SYNTHETIC: Microsoft Configuration Manager — MCM / ConfigMgr site and management point"
+                  },
+                  {
+                      "key":  "vcd-e620c929-73f3-5787-849c-885b76e0f62b",
                       "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
                       "address":  "10.51.20.51",
-                      "description":  ""
+                      "description":  "SYNTHETIC: Configuration Manager distribution point — Software distribution"
+                  },
+                  {
+                      "key":  "vcd-8f31d1bb-e6b9-5df9-b72c-2ba056c50628",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.52",
+                      "description":  "SYNTHETIC: WSUS / software update point — MCM software update point"
+                  },
+                  {
+                      "key":  "vcd-24f9531e-539a-5ba3-8b0d-a1c42282fcfc",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.60",
+                      "description":  "SYNTHETIC: Web application server — Frontend web node 1"
+                  },
+                  {
+                      "key":  "vcd-a404c24b-c8aa-5e4f-89c7-50370ed0739c",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.61",
+                      "description":  "SYNTHETIC: Web application server — Frontend web node 2"
+                  },
+                  {
+                      "key":  "vcd-cc7092ff-1453-5fb1-8b1b-13cb412ff7e0",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.62",
+                      "description":  "SYNTHETIC: Application server — Middleware node 1"
+                  },
+                  {
+                      "key":  "vcd-3afdff7c-a9ab-5fd0-b685-0baa103ccb06",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.63",
+                      "description":  "SYNTHETIC: Application server — Middleware node 2"
+                  },
+                  {
+                      "key":  "vcd-410b6666-2fc5-5488-90f9-3ae421d7358d",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.70",
+                      "description":  "SYNTHETIC: Azure DevOps Server — Self-hosted Azure DevOps Server"
+                  },
+                  {
+                      "key":  "vcd-34f31bba-412b-5d69-b962-a508903f0d6e",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.71",
+                      "description":  "SYNTHETIC: Azure DevOps Server standby — Secondary ADO application tier"
+                  },
+                  {
+                      "key":  "vcd-1f38cc3a-9be4-5a56-b549-9fc0ccee0476",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.72",
+                      "description":  "SYNTHETIC: Azure DevOps build agent — Windows build agent"
+                  },
+                  {
+                      "key":  "vcd-0a05718a-b3da-530d-9504-f04da7f5c04e",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.73",
+                      "description":  "SYNTHETIC: Azure DevOps build agent — Windows deployment agent"
+                  },
+                  {
+                      "key":  "vcd-36fbd576-9266-57f1-98e3-aca96444f25b",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.74",
+                      "description":  "SYNTHETIC: Artifact storage — Internal package/artifact repository"
+                  },
+                  {
+                      "key":  "vcd-4aae02e6-76c1-563f-81e3-99ced3386c36",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.75",
+                      "description":  "SYNTHETIC: Source control management — Git-based source control / repository mirror"
+                  },
+                  {
+                      "key":  "vcd-d30f2298-8a87-5382-ac7c-22fa76ecaef9",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.90",
+                      "description":  "SYNTHETIC: Backup proxy — DomainB application backups"
+                  },
+                  {
+                      "key":  "vcd-1610421b-2b5f-5a19-b887-82c5c978f0c1",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.110",
+                      "description":  "SYNTHETIC: Workstation / RDS client — Synthetic business client"
+                  },
+                  {
+                      "key":  "vcd-a1f35aea-f8fc-5ee6-b3f4-de8ad0cfd6cd",
+                      "networkId":  "urn:vcloud:network:2fe49e93-f9d3-5390-b2de-2386f285a9dc",
+                      "address":  "10.51.20.111",
+                      "description":  "SYNTHETIC: Workstation / RDS client — Synthetic business client"
                   }
               ]
 }

@@ -7,6 +7,91 @@ if ($RunUiTests -and [Environment]::UserInteractive -and $PSVersionTable.PSEditi
     Import-Module (Join-Path $ProjectRoot 'src\Infrastructure\Logging\Logging.psm1') -Force
     Import-Module (Join-Path $ProjectRoot 'src\Runtime\Dispatcher.psm1') -Force
 
+    Invoke-TestCase -Name 'Editor FormClosing No keeps the window open and preserves the dirty draft' -Body {
+        Import-Module (Join-Path $ProjectRoot 'src\Presentation\WinForms\NetworkEditorForm.psm1') -ErrorAction Stop
+        $form=[System.Windows.Forms.Form]::new()
+        $draft=[pscustomobject]@{ Name='Unsaved firewall rule'; Enabled=$false }
+        $model=[pscustomobject]@{ Dirty=$true; Closing=$false; Documents=$draft }
+        $requests=[pscustomobject]@{ Prompts=0; Cancellation=0; Workers=1 }
+        try {
+            $confirm={ $requests.Prompts++; return $false }.GetNewClosure()
+            $count={ return $requests.Workers }.GetNewClosure()
+            $cancel={ $requests.Cancellation++ }.GetNewClosure()
+            Register-NetworkEditorCloseHandler -Form $form -Model $model `
+                -ConfirmDiscard $confirm -GetWorkerCount $count -RequestCancellation $cancel
+            $form.Show()
+            [System.Windows.Forms.Application]::DoEvents()
+            $form.Close()
+            [System.Windows.Forms.Application]::DoEvents()
+            Assert-True $form.Visible 'No must cancel the real FormClosing event'
+            Assert-True (-not $form.IsDisposed) 'No must not dispose the editor'
+            Assert-True $model.Dirty 'Draft must remain dirty after No'
+            Assert-True (-not $model.Closing) 'No must not start closing, even with an active worker'
+            Assert-True ([object]::ReferenceEquals($draft,$model.Documents)) 'No must retain the same draft object'
+            Assert-Equal 1 $requests.Prompts
+            Assert-Equal 0 $requests.Cancellation
+            $form.Close()
+            Assert-True $form.Visible 'Repeated No must still keep the editor open'
+            Assert-Equal 2 $requests.Prompts
+            Assert-Equal 0 $requests.Cancellation
+        }
+        finally { $form.Dispose() }
+    }
+
+    Invoke-TestCase -Name 'Editor FormClosing Yes discards draft and clean close needs no prompt' -Body {
+        Import-Module (Join-Path $ProjectRoot 'src\Presentation\WinForms\NetworkEditorForm.psm1') -ErrorAction Stop
+        foreach ($dirty in @($true,$false)) {
+            $form=[System.Windows.Forms.Form]::new()
+            $model=[pscustomobject]@{ Dirty=$dirty; Closing=$false }
+            $requests=[pscustomobject]@{ Prompts=0; Cancellation=0 }
+            try {
+                $confirm={ $requests.Prompts++; return $true }.GetNewClosure()
+                $count={ return 0 }
+                $cancel={ $requests.Cancellation++ }.GetNewClosure()
+                Register-NetworkEditorCloseHandler -Form $form -Model $model `
+                    -ConfirmDiscard $confirm -GetWorkerCount $count -RequestCancellation $cancel
+                $form.Show()
+                [System.Windows.Forms.Application]::DoEvents()
+                $form.Close()
+                [System.Windows.Forms.Application]::DoEvents()
+                Assert-True (-not $form.Visible) 'Accepted close must close the editor'
+                Assert-Equal ([int]$dirty) $requests.Prompts 'Only a dirty draft prompts for confirmation'
+                Assert-Equal 0 $requests.Cancellation 'No worker cancellation when idle'
+            }
+            finally { $form.Dispose() }
+        }
+    }
+
+    Invoke-TestCase -Name 'Editor FormClosing waits for workers and requests cancellation once' -Body {
+        Import-Module (Join-Path $ProjectRoot 'src\Presentation\WinForms\NetworkEditorForm.psm1') -ErrorAction Stop
+        $form=[System.Windows.Forms.Form]::new()
+        $model=[pscustomobject]@{ Dirty=$true; Closing=$false }
+        $requests=[pscustomobject]@{ Prompts=0; Cancellation=0; Workers=1 }
+        try {
+            $confirm={ $requests.Prompts++; return $true }.GetNewClosure()
+            $count={ return $requests.Workers }.GetNewClosure()
+            $cancel={ $requests.Cancellation++ }.GetNewClosure()
+            Register-NetworkEditorCloseHandler -Form $form -Model $model `
+                -ConfirmDiscard $confirm -GetWorkerCount $count -RequestCancellation $cancel
+            $form.Show()
+            [System.Windows.Forms.Application]::DoEvents()
+            $form.Close()
+            Assert-True $form.Visible 'Worker must prevent premature close'
+            Assert-True $model.Closing 'Approved close must enter draining state'
+            Assert-Equal 1 $requests.Prompts
+            Assert-Equal 1 $requests.Cancellation
+            $form.Close()
+            Assert-True $form.Visible 'Repeated close during draining stays cancelled'
+            Assert-Equal 1 $requests.Prompts 'No repeated prompts while draining'
+            Assert-Equal 1 $requests.Cancellation 'Repeated close must not duplicate cancellation'
+            $requests.Workers=0
+            $form.Close()
+            Assert-True (-not $form.Visible) 'Window closes once background workers drain'
+            Assert-Equal 1 $requests.Cancellation
+        }
+        finally { $form.Dispose() }
+    }
+
     Invoke-TestCase -Name 'Read-only discovery dialog presents dropdowns, ID-backed selections and network checkboxes' -Body {
         # The dialog is constructed entirely from a synthetic in-memory inventory.
         Import-Module (Join-Path $ProjectRoot 'src\Presentation\WinForms\VcdDiscoveryForm.psm1') -ErrorAction Stop

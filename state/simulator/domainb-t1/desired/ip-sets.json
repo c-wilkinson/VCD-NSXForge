@@ -3,12 +3,199 @@
     "resourceKind":  "ipSets",
     "items":  [
                   {
-                      "key":  "vcd-b8139949-5406-5650-abdb-910fbc2c0400",
-                      "name":  "DomainB-T1-Systems",
-                      "description":  "Synthetic addresses; not actual assets",
+                      "key":  "vcd-d2d118fe-ecb3-5958-9e64-7cfee5c3b14d",
+                      "name":  "Web frontend servers",
+                      "description":  "SYNTHETIC B1 IP group: Web frontend servers",
                       "addresses":  [
-                                        "10.51.20.10",
-                                        "10.51.20.11"
+                                        "10.51.20.60",
+                                        "10.51.20.61"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-c2faaeb3-2f9f-5c1a-a79f-26602b912914",
+                      "name":  "Application middleware",
+                      "description":  "SYNTHETIC B1 IP group: Application middleware",
+                      "addresses":  [
+                                        "10.51.20.62",
+                                        "10.51.20.63"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-0d1c023e-d3bf-5ab8-99a3-2ca84131da34",
+                      "name":  "SQL FCI nodes",
+                      "description":  "SYNTHETIC B1 IP group: SQL FCI nodes",
+                      "addresses":  [
+                                        "10.51.20.21",
+                                        "10.51.20.22"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-c4513159-bb5c-5c59-a8a3-c896ab9e91b6",
+                      "name":  "SQL FCI / AG listeners",
+                      "description":  "SYNTHETIC B1 IP group: SQL FCI / AG listeners",
+                      "addresses":  [
+                                        "10.51.20.20",
+                                        "10.51.20.23"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-318a3cec-39b9-514a-a750-0e622f9ce100",
+                      "name":  "DomainC SQL DR replicas",
+                      "description":  "SYNTHETIC B1 IP group: DomainC SQL DR replicas",
+                      "addresses":  [
+                                        "10.52.20.21",
+                                        "10.52.20.22"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-1632ea2c-d3bf-5b23-af08-f89e6df27702",
+                      "name":  "File servers \u0026 DFS",
+                      "description":  "SYNTHETIC B1 IP group: File servers \u0026 DFS",
+                      "addresses":  [
+                                        "10.51.20.30",
+                                        "10.51.20.31",
+                                        "10.51.20.32"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-7ab6e7ba-8160-5df1-a0d5-4ce425e13092",
+                      "name":  "RDS brokers",
+                      "description":  "SYNTHETIC B1 IP group: RDS brokers",
+                      "addresses":  [
+                                        "10.51.20.40",
+                                        "10.51.20.41"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-11a5b856-5f71-597a-bc82-8f308ecde885",
+                      "name":  "RDS gateways",
+                      "description":  "SYNTHETIC B1 IP group: RDS gateways",
+                      "addresses":  [
+                                        "10.51.20.42",
+                                        "10.51.20.43"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-2a6fff94-3996-5b7f-bafc-ccee5008dcdc",
+                      "name":  "RDS session hosts",
+                      "description":  "SYNTHETIC B1 IP group: RDS session hosts",
+                      "addresses":  [
+                                        "10.51.20.45",
+                                        "10.51.20.46",
+                                        "10.51.20.47"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-ed9c7d84-81b3-5827-994c-3005ad6ce5d6",
+                      "name":  "MCM site server",
+                      "description":  "SYNTHETIC B1 IP group: MCM site server",
+                      "addresses":  [
+                                        "10.51.20.50"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-efdc17b7-4055-5c35-81a4-2a12e028eed3",
+                      "name":  "MCM distribution",
+                      "description":  "SYNTHETIC B1 IP group: MCM distribution",
+                      "addresses":  [
+                                        "10.51.20.51"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-cc2d7c47-2364-5f7b-89fa-a44732712c1e",
+                      "name":  "Software update point",
+                      "description":  "SYNTHETIC B1 IP group: Software update point",
+                      "addresses":  [
+                                        "10.51.20.52"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-cf8cc11c-d0a0-5800-9edf-d65bebe28e04",
+                      "name":  "Azure DevOps application tier",
+                      "description":  "SYNTHETIC B1 IP group: Azure DevOps application tier",
+                      "addresses":  [
+                                        "10.51.20.70",
+                                        "10.51.20.71"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-8cbd86b3-8037-5078-9e24-6495ac6bc58a",
+                      "name":  "Azure DevOps build and deploy agents",
+                      "description":  "SYNTHETIC B1 IP group: Azure DevOps build and deploy agents",
+                      "addresses":  [
+                                        "10.51.20.72",
+                                        "10.51.20.73"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-6c1df797-d3f2-53be-9e87-693c1937abb4",
+                      "name":  "Artifact and source control servers",
+                      "description":  "SYNTHETIC B1 IP group: Artifact and source control servers",
+                      "addresses":  [
+                                        "10.51.20.74",
+                                        "10.51.20.75"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-df5fc2c6-63fd-5fc7-87f8-fd79cc98e152",
+                      "name":  "Backup proxy",
+                      "description":  "SYNTHETIC B1 IP group: Backup proxy",
+                      "addresses":  [
+                                        "10.51.20.90"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-c2e05a69-7d87-57a0-ad3d-3ef78a9d8f20",
+                      "name":  "Business clients",
+                      "description":  "SYNTHETIC B1 IP group: Business clients",
+                      "addresses":  [
+                                        "10.51.20.110",
+                                        "10.51.20.111"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-c206061b-6a14-5851-836e-156671d3c7e2",
+                      "name":  "DomainB and trusted DomainA DCs",
+                      "description":  "SYNTHETIC B1 IP group: DomainB and trusted DomainA DCs",
+                      "addresses":  [
+                                        "10.51.10.10",
+                                        "10.51.10.11",
+                                        "10.50.10.10",
+                                        "10.50.10.11"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-c5faf811-e24b-587c-985e-143e0ad620dd",
+                      "name":  "DomainA privileged management endpoints",
+                      "description":  "SYNTHETIC B1 IP group: DomainA privileged management endpoints",
+                      "addresses":  [
+                                        "10.50.10.40",
+                                        "10.50.10.45"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-ea15cb31-4b90-56a4-aa29-2f82b817f6cd",
+                      "name":  "DomainC Azure DevOps agent",
+                      "description":  "SYNTHETIC B1 IP group: DomainC Azure DevOps agent",
+                      "addresses":  [
+                                        "10.52.20.72"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-e1a779da-1594-5896-b95c-b8b470695d47",
+                      "name":  "Central monitoring \u0026 syslog",
+                      "description":  "SYNTHETIC B1 IP group: Central monitoring \u0026 syslog",
+                      "addresses":  [
+                                        "10.50.20.10",
+                                        "10.50.20.11"
+                                    ]
+                  },
+                  {
+                      "key":  "vcd-8ace5b8a-a318-558a-88bb-6a28f74d0ac0",
+                      "name":  "DomainC DR subnets",
+                      "description":  "SYNTHETIC B1 IP group: DomainC DR subnets",
+                      "addresses":  [
+                                        "10.52.20.0/24"
                                     ]
                   }
               ]
