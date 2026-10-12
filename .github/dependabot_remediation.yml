@@ -6,22 +6,76 @@ on:
       - main
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
-  dependabot:
+  test:
+    name: Run NUnit tests
     if: github.event.pull_request.user.login == 'dependabot[bot]'
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v6
 
-      - name: Run tests
-        run: npm test
+      - name: Run headless NUnit 3 tests
+        shell: cmd
+        run: >-
+          powershell.exe -NoLogo -NoProfile -NonInteractive -STA
+          -File ".\tools\Invoke-Tests.ps1"
+          -NUnitPath ".\test-results\TEST-VcdNetworkManager.xml"
 
-      - name: Enable auto-merge for approved updates
-        if: ${{ success() }}
+      - name: Verify NUnit test results
+        shell: powershell
+        run: |
+          $path = '.\test-results\TEST-VcdNetworkManager.xml'
+
+          if (-not (Test-Path -LiteralPath $path)) {
+              throw "NUnit report not found: $path"
+          }
+
+          [xml]$report = Get-Content -LiteralPath $path -Raw
+          $root = $report.DocumentElement
+
+          if ($root.Name -ne 'test-run') {
+              throw 'Invalid NUnit 3 report.'
+          }
+
+          foreach ($attribute in @('total', 'passed', 'failed', 'result')) {
+              if (-not $root.HasAttribute($attribute)) {
+                  throw "Missing NUnit attribute: $attribute"
+              }
+          }
+
+          $total  = [int]$root.GetAttribute('total')
+          $passed = [int]$root.GetAttribute('passed')
+          $failed = [int]$root.GetAttribute('failed')
+          $result = $root.GetAttribute('result')
+
+          Write-Host "Total:  $total"
+          Write-Host "Passed: $passed"
+          Write-Host "Failed: $failed"
+          Write-Host "Result: $result"
+
+          if ($total -le 0) {
+              throw 'No tests were executed.'
+          }
+
+          if ($failed -gt 0) {
+              throw "$failed NUnit test(s) failed. Auto-merge blocked."
+          }
+
+  merge:
+    name: Enable Dependabot auto-merge
+    needs: test
+    if: ${{ needs.test.result == 'success' }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Enable auto-merge for successful updates
         env:
           GH_TOKEN: ${{ secrets.TOKEN_GITHUB }}
           PR_URL: ${{ github.event.pull_request.html_url }}
