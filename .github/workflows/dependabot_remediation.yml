@@ -13,7 +13,9 @@ permissions:
 jobs:
   test:
     name: Run NUnit tests
-    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: windows-latest
 
     steps:
@@ -69,7 +71,10 @@ jobs:
   merge:
     name: Enable Dependabot auto-merge
     needs: test
-    if: ${{ needs.test.result == 'success' }}
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      needs.test.result == 'success'
     runs-on: ubuntu-latest
 
     permissions:
