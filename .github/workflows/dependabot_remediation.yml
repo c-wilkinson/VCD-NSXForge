@@ -37,9 +37,9 @@ jobs:
 
           [xml]$report = Get-Content -LiteralPath $path -Raw
           $root = $report.DocumentElement
-
-          if ($root.Name -ne 'test-run') {
-              throw 'Invalid NUnit 3 report.'
+          
+          if ($root.LocalName -ne 'test-run') {
+            throw "Invalid NUnit 3 report: $($root.LocalName)"
           }
 
           foreach ($attribute in @('total', 'passed', 'failed', 'result')) {
